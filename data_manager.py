@@ -25,9 +25,23 @@ DEFAULT_DATA = {
     }
 }
 
+_INSTANCE = None
+
+def get_data_manager():
+    global _INSTANCE
+    if _INSTANCE is None:
+        _INSTANCE = DataManager()
+    return _INSTANCE
 
 class DataManager:
     def __init__(self):
+        import traceback
+
+        print("\n[DM CREATED]")
+        print("[DM ID]", id(self))
+        print("[DM STACK TRACE]")
+        traceback.print_stack(limit=5)
+
         self.data = self._load_data()
 
     # ---------------- LOAD ----------------
@@ -47,6 +61,8 @@ class DataManager:
                 data["settings"].setdefault("osc_port", 9000)
                 data["settings"].setdefault("font", "sansSerif")
 
+                print("[LOAD RAW FILE]", data.get("settings"))
+
                 return data
 
             except Exception as e:
@@ -59,6 +75,7 @@ class DataManager:
         try:
             with open(SAVE_FILE, "w", encoding="utf-8") as f:
                 json.dump(self.data, f, indent=2, ensure_ascii=False)
+                print("[SAVE SNAPSHOT]", self.data["settings"])
         except Exception as e:
             print(f"Fehler beim Speichern: {e}")
 
@@ -68,6 +85,13 @@ class DataManager:
 
     def update_settings(self, key, value):
         self.data["settings"][key] = value
+        self.save_data()
+        print("[UPDATE CALL]", key, value)
+
+    def update_settings_bulk(self, updates: dict):
+        print("[SETTINGS BULK UPDATE]", updates)
+
+        self.data["settings"].update(updates)
         self.save_data()
 
     def get_font(self):

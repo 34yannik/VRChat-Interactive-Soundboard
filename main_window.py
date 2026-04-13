@@ -2,7 +2,7 @@ from PySide6.QtWidgets import QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QL
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QKeySequence, QShortcut
 
-from data_manager import DataManager
+from data_manager import DataManager, get_data_manager
 from audio_player import AudioPlayer, get_audio_duration
 from osc_client import OscClient
 from sidebar_widget import SidebarWidget
@@ -21,7 +21,7 @@ class MainWindow(QMainWindow):
         self.setMinimumSize(900, 600)
 
         # Kern-Komponenten initialisieren
-        self.data_manager = DataManager()
+        self.data_manager = get_data_manager()
         self.audio_player = AudioPlayer()
 
         settings = self.data_manager.get_settings()

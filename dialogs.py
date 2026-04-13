@@ -4,7 +4,7 @@ from PySide6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel,
                                QFormLayout, QWidget, QSpinBox, QCheckBox)
 from PySide6.QtCore import Qt
 import fancify_text
-from data_manager import DataManager
+from data_manager import get_data_manager
 
 # Gemeinsamer Style fuer alle Dialoge
 DIALOG_STYLE = """
@@ -545,21 +545,8 @@ class SettingsDialog(QDialog):
         }
 
     def get_all_fonts(self):
-        fonts = self.get_fancify_fonts()
+        fonts = list(fancify_text.fonts.keys())
         fonts.append("UwU")
-        return fonts
-
-
-    def get_fancify_fonts(self):
-        fonts = []
-
-        for name in dir(fancify_text):
-            obj = getattr(fancify_text, name)
-
-            # nur Funktionen nehmen
-            if callable(obj) and not name.startswith("_"):
-                fonts.append(name)
-
         return fonts
 
     def save_and_close(self):
@@ -569,9 +556,7 @@ class SettingsDialog(QDialog):
             "font": self.font_dropdown.currentText()
         }
 
-        dm = DataManager()
-
-        for key, value in settings.items():
-            dm.update_settings(key, value)
+        dm = get_data_manager()
+        dm.update_settings_bulk(settings)
 
         self.accept()
