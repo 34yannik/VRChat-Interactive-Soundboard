@@ -48,13 +48,13 @@ vrc_soundboard/
 
 1. In VRChat: Settings -> OSC -> Enable
 2. Standard-Port: 9000 (Host: 127.0.0.1)
-3. Im Soundboard: Settings -> OSC-Einstellungen pruefen
+3. Im Soundboard: Settings -> OSC-Einstellungen prüfen
 
 ## Sound hinzufuegen
 
-1. Eine Collection links auswaehlen
+1. Eine Collection links auswählen
 2. Auf das "+" / "Add Sound" Feld klicken
-3. Name, Icon, Hotkey und Datei auswaehlen
+3. Name, Icon, Hotkey und Datei auswählen
 4. Optional: OSC Chatbox-Nachricht eingeben
 
 ## Daten

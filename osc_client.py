@@ -1,4 +1,7 @@
 # OSC = Open Sound Control, damit kommunizieren wir mit VRChat
+import fancify_text
+import uwuify
+from data_manager import DataManager
 
 try:
     from pythonosc import udp_client
@@ -31,16 +34,34 @@ class OscClient:
         self._connect()
 
     def send_chatbox_message(self, message):
-        """Sendet eine Nachricht in die VRChat Chatbox"""
-        if self.client:
-            try:
-                # True = sofort anzeigen, kein Tastatur-Popup
-                self.client.send_message("/chatbox/input", [message, True])
-                print(f"[OSC Chatbox] -> '{message}'")
-            except Exception as e:
-                print(f"OSC Chatbox Fehler: {e}")
-        else:
+        """Sendet eine Nachricht in die VRChat Chatbox mit Font/uwuify Support"""
+
+        if not self.client:
             print(f"[OSC nicht verfuegbar] Chatbox: '{message}'")
+            return
+
+        try:
+
+            data_manager = DataManager()
+            settings = data_manager.get_settings()
+            font = settings.get("font", "Normal")
+
+            if font == "UwU":
+                if "?" not in message and "!" not in message:
+                    message += "."
+                message = uwuify.uwu(message, flags=uwuify.SMILEY | uwuify.STUTTER)
+
+            elif font:
+                try:
+                    message = fancify_text.fancify(message, font)
+                except Exception as e:
+                    print(f"[FONT ERROR] {e} → fallback used")
+
+            self.client.send_message("/chatbox/input", [message, True])
+            print(f"[OSC Chatbox] -> '{message}'")
+
+        except Exception as e:
+            print(f"OSC Chatbox Fehler: {e}")
 
     def send_avatar_parameter(self, parameter_name, value):
         """Steuert einen Avatar-Parameter (z.B. Emotes, visuelle Effekte)"""

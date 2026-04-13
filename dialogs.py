@@ -3,6 +3,8 @@ from PySide6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel,
                                QLineEdit, QPushButton, QFileDialog, QComboBox,
                                QFormLayout, QWidget, QSpinBox, QCheckBox)
 from PySide6.QtCore import Qt
+import fancify_text
+from data_manager import DataManager
 
 # Gemeinsamer Style fuer alle Dialoge
 DIALOG_STYLE = """
@@ -246,7 +248,7 @@ class DeleteCollectionDialog(QDialog):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(20, 20, 20, 20)
 
-        label = QLabel(f"Möchtest du die Collection '{collection_name}' wirklich löschen?")
+        label = QLabel(f"Delete Collection '{collection_name}'?")
         label.setStyleSheet("color: white; font-size: 13px;")
         label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
@@ -256,11 +258,11 @@ class DeleteCollectionDialog(QDialog):
         btn_row = QHBoxLayout()
         btn_row.addStretch()
 
-        cancel_btn = QPushButton("Abbrechen")
+        cancel_btn = QPushButton("Cancel")
         cancel_btn.clicked.connect(self.reject)
         cancel_btn.setStyleSheet(CANCEL_BTN_STYLE)
 
-        delete_btn = QPushButton("Löschen")
+        delete_btn = QPushButton("Delete")
         delete_btn.clicked.connect(self.accept)
         delete_btn.setStyleSheet("""
             QPushButton {
@@ -355,68 +357,49 @@ class EditPageDialog(QDialog):
         super().__init__(parent)
 
         self.setWindowTitle("Page bearbeiten")
-        self.setFixedSize(320, 160)
+        self.setFixedSize(360, 200)
 
         self._setup_ui(current_name)
+        self.setStyleSheet(DIALOG_STYLE)
 
     def _setup_ui(self, current_name):
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(20, 20, 20, 20)
-        layout.setSpacing(12)
+        layout.setSpacing(14)
+        layout.setContentsMargins(22, 20, 22, 20)
 
         title = QLabel("Page bearbeiten")
         title.setStyleSheet("color: white; font-size: 16px; font-weight: bold;")
         layout.addWidget(title)
 
         form = QFormLayout()
+        form.setSpacing(10)
 
         self.name_input = QLineEdit()
         self.name_input.setText(current_name)
-        self.name_input.setPlaceholderText("Page Name")
+        self.name_input.setPlaceholderText("z.B. Main Sounds")
 
         form.addRow("Name:", self.name_input)
 
         layout.addLayout(form)
         layout.addStretch()
 
-        btn_row = QHBoxLayout()
-        btn_row.addStretch()
+        button_row = QHBoxLayout()
+        button_row.addStretch()
 
         cancel_btn = QPushButton("Abbrechen")
+        cancel_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         cancel_btn.clicked.connect(self.reject)
+        cancel_btn.setStyleSheet(CANCEL_BTN_STYLE)
 
         save_btn = QPushButton("Speichern")
+        save_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         save_btn.clicked.connect(self.accept)
+        save_btn.setStyleSheet(CONFIRM_BTN_STYLE)
 
-        cancel_btn.setStyleSheet("""
-            QPushButton {
-                background: transparent;
-                color: #aaa;
-                border: none;
-                padding: 6px 12px;
-            }
-            QPushButton:hover {
-                color: white;
-            }
-        """)
+        button_row.addWidget(cancel_btn)
+        button_row.addWidget(save_btn)
 
-        save_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #2a3cff;
-                color: white;
-                border: none;
-                padding: 6px 14px;
-                border-radius: 6px;
-            }
-            QPushButton:hover {
-                background-color: #3a4dff;
-            }
-        """)
-
-        btn_row.addWidget(cancel_btn)
-        btn_row.addWidget(save_btn)
-
-        layout.addLayout(btn_row)
+        layout.addLayout(button_row)
 
     def get_name(self):
         return self.name_input.text().strip() or "Page"
@@ -431,18 +414,15 @@ class DeletePageDialog(QDialog):
         self.setFixedSize(320, 160)
 
         self._setup_ui(page_name)
+        self.setStyleSheet(DIALOG_STYLE)
 
     def _setup_ui(self, page_name):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(20, 20, 20, 20)
 
-        label = QLabel(
-            f"Möchtest du die Page\n\n"
-            f"'{page_name}'\n\n"
-            f"wirklich löschen?"
-        )
-        label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        label = QLabel(f"Delete Page '{page_name}'?")
         label.setStyleSheet("color: white; font-size: 13px;")
+        label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         layout.addWidget(label)
         layout.addStretch()
@@ -450,30 +430,20 @@ class DeletePageDialog(QDialog):
         btn_row = QHBoxLayout()
         btn_row.addStretch()
 
-        cancel_btn = QPushButton("Abbrechen")
-        delete_btn = QPushButton("Löschen")
-
+        cancel_btn = QPushButton("Cancel")
+        cancel_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         cancel_btn.clicked.connect(self.reject)
+        cancel_btn.setStyleSheet(CANCEL_BTN_STYLE)
+
+        delete_btn = QPushButton("Delete")
+        delete_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         delete_btn.clicked.connect(self.accept)
-
-        cancel_btn.setStyleSheet("""
-            QPushButton {
-                background: transparent;
-                color: #aaa;
-                border: none;
-                padding: 6px 12px;
-            }
-            QPushButton:hover {
-                color: white;
-            }
-        """)
-
         delete_btn.setStyleSheet("""
             QPushButton {
                 background-color: #3a1515;
                 color: #ff4d4d;
                 border: 1px solid #5a1f1f;
-                padding: 6px 14px;
+                padding: 8px 14px;
                 border-radius: 6px;
             }
             QPushButton:hover {
@@ -486,14 +456,13 @@ class DeletePageDialog(QDialog):
 
         layout.addLayout(btn_row)
 
-
 class SettingsDialog(QDialog):
     """Einstellungs-Fenster fuer OSC und andere Optionen"""
 
     def __init__(self, current_settings, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Einstellungen")
-        self.setFixedSize(400, 270)
+        self.setFixedSize(400, 320)
         self.current_settings = current_settings
         self._setup_ui()
         self.setStyleSheet(DIALOG_STYLE)
@@ -534,6 +503,25 @@ class SettingsDialog(QDialog):
         button_row = QHBoxLayout()
         button_row.addStretch()
 
+        # ---------------- FONT SETTING ----------------
+        font_label = QLabel("Chatbox Font")
+        font_label.setStyleSheet("color: #777799; font-size: 11px; font-weight: bold; letter-spacing: 1px;")
+        layout.addWidget(font_label)
+
+        self.font_dropdown = QComboBox()
+        self.font_dropdown.addItems(self.get_all_fonts())
+
+        self.font_dropdown.setCurrentText(
+            self.current_settings.get("font")
+        )
+
+        self.font_dropdown.setStyleSheet(
+            "background-color: #16162a; color: #ddddee; border: 1px solid #2a2a45; "
+            "border-radius: 6px; padding: 6px;"
+        )
+
+        layout.addWidget(self.font_dropdown)
+
         cancel_btn = QPushButton("Abbrechen")
         cancel_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         cancel_btn.clicked.connect(self.reject)
@@ -541,15 +529,49 @@ class SettingsDialog(QDialog):
 
         save_btn = QPushButton("Speichern")
         save_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        save_btn.clicked.connect(self.accept)
+        save_btn.clicked.connect(self.save_and_close)
         save_btn.setStyleSheet(CONFIRM_BTN_STYLE)
 
         button_row.addWidget(cancel_btn)
         button_row.addWidget(save_btn)
         layout.addLayout(button_row)
 
+
     def get_settings(self):
         return {
             "osc_host": self.osc_host_input.text().strip(),
-            "osc_port": self.osc_port_input.value()
+            "osc_port": self.osc_port_input.value(),
+            "font": self.font_dropdown.currentText()
         }
+
+    def get_all_fonts(self):
+        fonts = self.get_fancify_fonts()
+        fonts.append("UwU")
+        return fonts
+
+
+    def get_fancify_fonts(self):
+        fonts = []
+
+        for name in dir(fancify_text):
+            obj = getattr(fancify_text, name)
+
+            # nur Funktionen nehmen
+            if callable(obj) and not name.startswith("_"):
+                fonts.append(name)
+
+        return fonts
+
+    def save_and_close(self):
+        settings = {
+            "osc_host": self.osc_host_input.text().strip(),
+            "osc_port": self.osc_port_input.value(),
+            "font": self.font_dropdown.currentText()
+        }
+
+        dm = DataManager()
+
+        for key, value in settings.items():
+            dm.update_settings(key, value)
+
+        self.accept()

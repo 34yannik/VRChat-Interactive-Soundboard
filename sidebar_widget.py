@@ -4,10 +4,16 @@ from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
 from PySide6.QtCore import Qt, Signal
 
 
+from PySide6.QtWidgets import QWidget, QHBoxLayout, QLabel, QMenu
+from PySide6.QtCore import Qt, Signal
+
+
 class CollectionItem(QWidget):
     """Ein einzelner Eintrag in der Collections-Liste"""
 
-    clicked = Signal(int)  # Gibt collection_id zurueck
+    clicked = Signal(int)
+    collection_edit_requested = Signal(int)
+    collection_delete_requested = Signal(int)
 
     ACTIVE_STYLE = """
         CollectionItem {
@@ -15,6 +21,7 @@ class CollectionItem(QWidget):
             border-radius: 8px;
         }
     """
+
     IDLE_STYLE = """
         CollectionItem {
             background: transparent;
@@ -29,8 +36,14 @@ class CollectionItem(QWidget):
         super().__init__(parent)
         self.collection_data = collection_data
         self.is_active = False
+
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setFixedHeight(40)
+
+        # 👉 Right-click Menu aktivieren
+        self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.customContextMenuRequested.connect(self._open_context_menu)
+
         self._setup_ui()
         self._apply_style()
 
@@ -44,9 +57,11 @@ class CollectionItem(QWidget):
         self.icon_label.setStyleSheet("font-size: 15px; background: transparent;")
         self.icon_label.setFixedWidth(22)
 
-        # Collection Name
+        # Name
         self.name_label = QLabel(self.collection_data["name"])
-        self.name_label.setStyleSheet("font-size: 13px; background: transparent; color: #aaaacc;")
+        self.name_label.setStyleSheet(
+            "font-size: 13px; background: transparent; color: #aaaacc;"
+        )
 
         layout.addWidget(self.icon_label)
         layout.addWidget(self.name_label)
@@ -64,13 +79,31 @@ class CollectionItem(QWidget):
                 "font-size: 13px; background: transparent; color: #888899;"
             )
 
-    def set_active(self, active):
+    def set_active(self, active: bool):
         self.is_active = active
         self._apply_style()
 
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
             self.clicked.emit(self.collection_data["id"])
+
+    # -----------------------------
+    # CONTEXT MENU (RIGHT CLICK)
+    # -----------------------------
+    def _open_context_menu(self, pos):
+        menu = QMenu(self)
+
+        edit_action = menu.addAction("Edit Collection")
+        delete_action = menu.addAction("Delete Collection")
+
+        edit_action.triggered.connect(
+            lambda: self.collection_edit_requested.emit(self.collection_data["id"])
+        )
+        delete_action.triggered.connect(
+            lambda: self.collection_delete_requested.emit(self.collection_data["id"])
+        )
+
+        menu.exec(self.mapToGlobal(pos))
 
 
 class SidebarWidget(QWidget):
@@ -213,7 +246,10 @@ class SidebarWidget(QWidget):
 
         for collection_data in collections_list:
             item = CollectionItem(collection_data)
+
             item.clicked.connect(self._on_item_clicked)
+            item.collection_edit_requested.connect(self.collection_edit_requested.emit)
+            item.collection_delete_requested.connect(self.collection_delete_requested.emit)
             self.collection_items[collection_data["id"]] = item
             self.collections_layout.addWidget(item)
 
