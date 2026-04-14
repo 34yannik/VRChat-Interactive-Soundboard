@@ -5,6 +5,7 @@ from PySide6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel,
 from PySide6.QtCore import Qt
 import fancify_text
 from data_manager import get_data_manager
+from audio_player import get_audio_inputs, get_audio_outputs
 
 # Shared style for all dialogs
 DIALOG_STYLE = """
@@ -462,8 +463,9 @@ class SettingsDialog(QDialog):
     def __init__(self, current_settings, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Settings")
-        self.setFixedSize(400, 320)
+        self.setFixedSize(400, 420)
         self.current_settings = current_settings
+
         self._setup_ui()
         self.setStyleSheet(DIALOG_STYLE)
 
@@ -472,13 +474,16 @@ class SettingsDialog(QDialog):
         layout.setSpacing(14)
         layout.setContentsMargins(22, 20, 22, 20)
 
+        # ---------------- TITLE ----------------
         title_label = QLabel("Settings")
         title_label.setStyleSheet("color: white; font-size: 16px; font-weight: bold;")
         layout.addWidget(title_label)
 
-        # OSC settings
+        # ---------------- OSC ----------------
         osc_label = QLabel("VRChat OSC Connection")
-        osc_label.setStyleSheet("color: #777799; font-size: 11px; font-weight: bold; letter-spacing: 1px;")
+        osc_label.setStyleSheet(
+            "color: #777799; font-size: 11px; font-weight: bold; letter-spacing: 1px;"
+        )
         layout.addWidget(osc_label)
 
         form = QFormLayout()
@@ -498,29 +503,60 @@ class SettingsDialog(QDialog):
         form.addRow("OSC Port:", self.osc_port_input)
 
         layout.addLayout(form)
-        layout.addStretch()
 
-        button_row = QHBoxLayout()
-        button_row.addStretch()
-
-        # ---------------- FONT SETTING ----------------
+        # ---------------- FONT ----------------
         font_label = QLabel("Chatbox Font")
-        font_label.setStyleSheet("color: #777799; font-size: 11px; font-weight: bold; letter-spacing: 1px;")
+        font_label.setStyleSheet(
+            "color: #777799; font-size: 11px; font-weight: bold; letter-spacing: 1px;"
+        )
         layout.addWidget(font_label)
 
         self.font_dropdown = QComboBox()
         self.font_dropdown.addItems(self.get_all_fonts())
+        self.font_dropdown.setCurrentText(self.current_settings.get("font", ""))
 
-        self.font_dropdown.setCurrentText(
-            self.current_settings.get("font")
-        )
+        self.font_dropdown.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        self.font_dropdown.setEditable(False)
 
         self.font_dropdown.setStyleSheet(
             "background-color: #16162a; color: #ddddee; border: 1px solid #2a2a45; "
             "border-radius: 6px; padding: 6px;"
         )
-
         layout.addWidget(self.font_dropdown)
+
+        # ---------------- SOUND ----------------
+        sound_label = QLabel("Sound Settings")
+        sound_label.setStyleSheet(
+            "color: #777799; font-size: 11px; font-weight: bold; letter-spacing: 1px;"
+        )
+        layout.addWidget(sound_label)
+
+        # OUTPUT
+        self.enable_output = QCheckBox("Enable Output Device")
+        self.enable_output.setChecked(self.current_settings.get("enable_output", False))
+        layout.addWidget(self.enable_output)
+
+        self.output_device = QComboBox()
+        self.output_device.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        self.output_device.setEditable(False)
+
+        self.output_device.addItems(get_audio_outputs())
+
+        saved_output = self.current_settings.get("output_device", "")
+        if saved_output:
+            index = self.output_device.findText(saved_output)
+            if index != -1:
+                self.output_device.setCurrentIndex(index)
+
+        self.output_device.setEnabled(self.enable_output.isChecked())
+
+        layout.addWidget(self.output_device)
+
+        self.enable_output.toggled.connect(self.output_device.setEnabled)
+
+        # ---------------- BUTTONS ----------------
+        button_row = QHBoxLayout()
+        button_row.addStretch()
 
         cancel_btn = QPushButton("Cancel")
         cancel_btn.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -534,26 +570,36 @@ class SettingsDialog(QDialog):
 
         button_row.addWidget(cancel_btn)
         button_row.addWidget(save_btn)
+
         layout.addLayout(button_row)
 
-
-    def get_settings(self):
-        return {
-            "osc_host": self.osc_host_input.text().strip(),
-            "osc_port": self.osc_port_input.value(),
-            "font": self.font_dropdown.currentText()
-        }
+        layout.addStretch()
 
     def get_all_fonts(self):
         fonts = list(fancify_text.fonts.keys())
         fonts.append("UwU")
         return fonts
 
+    def get_settings(self):
+        return {
+            "osc_host": self.osc_host_input.text().strip(),
+            "osc_port": self.osc_port_input.value(),
+            "font": self.font_dropdown.currentText(),
+
+            # SOUND SETTINGS
+            "enable_output": self.enable_output.isChecked(),
+            "output_device": self.output_device.currentText(),
+        }
+
     def save_and_close(self):
         settings = {
             "osc_host": self.osc_host_input.text().strip(),
             "osc_port": self.osc_port_input.value(),
-            "font": self.font_dropdown.currentText()
+            "font": self.font_dropdown.currentText(),
+
+            # SOUND SETTINGS
+            "enable_output": self.enable_output.isChecked(),
+            "output_device": self.output_device.currentText(),
         }
 
         dm = get_data_manager()

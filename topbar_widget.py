@@ -1,7 +1,6 @@
 from PySide6.QtWidgets import (QWidget, QHBoxLayout, QLabel, QPushButton,
                                QSlider, QLineEdit, QMenu)
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QAction
 
 TOPBAR_BUTTON_STYLE = """
     QPushButton {
@@ -29,8 +28,12 @@ class TopBarWidget(QWidget):
         super().__init__(parent)
         self.current_columns = 4
         self.current_rows = 4
+
         self.setFixedHeight(50)
-        self.setStyleSheet("TopBarWidget { background-color: #0a0a16; border-bottom: 1px solid #1a1a30; }")
+        self.setStyleSheet(
+            "TopBarWidget { background-color: #0a0a16; border-bottom: 1px solid #1a1a30; }"
+        )
+
         self._setup_ui()
 
     def _setup_ui(self):
@@ -52,7 +55,7 @@ class TopBarWidget(QWidget):
         layout.addStretch()
 
         self.search_field = QLineEdit()
-        self.search_field.setPlaceholderText("Search sounds, hotkeys...")
+        self.search_field.setPlaceholderText("Search sounds...")
         self.search_field.setFixedWidth(200)
         self.search_field.textChanged.connect(self.search_changed.emit)
         self.search_field.setStyleSheet("""
@@ -69,14 +72,12 @@ class TopBarWidget(QWidget):
         """)
         layout.addWidget(self.search_field)
 
-        # Columns-Button
         self.columns_btn = QPushButton(f"{self.current_columns} Columns ▾")
         self.columns_btn.setStyleSheet(TOPBAR_BUTTON_STYLE)
         self.columns_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.columns_btn.clicked.connect(self._open_columns_menu)
         layout.addWidget(self.columns_btn)
 
-        # Rows-Button (neu)
         self.rows_btn = QPushButton(f"{self.current_rows} Rows ▾")
         self.rows_btn.setStyleSheet(TOPBAR_BUTTON_STYLE)
         self.rows_btn.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -101,31 +102,52 @@ class TopBarWidget(QWidget):
 
         self.volume_label = QLabel("75%")
         self.volume_label.setFixedWidth(34)
-        self.volume_label.setStyleSheet("color: #777799; font-size: 12px; background: transparent; border: none;")
+        self.volume_label.setStyleSheet(
+            "color: #777799; font-size: 12px; background: transparent; border: none;"
+        )
         layout.addWidget(self.volume_label)
 
         layout.addSpacing(14)
 
         self.status_dot = QLabel("●")
-        self.status_dot.setStyleSheet("color: #22cc55; font-size: 11px; background: transparent; border: none;")
+        self.status_dot.setStyleSheet(
+            "color: #22cc55; font-size: 11px; background: transparent; border: none;"
+        )
         layout.addWidget(self.status_dot)
 
         self.status_text = QLabel("VRChat Connected")
-        self.status_text.setStyleSheet("color: #777799; font-size: 12px; background: transparent; border: none;")
+        self.status_text.setStyleSheet(
+            "color: #777799; font-size: 12px; background: transparent; border: none;"
+        )
         layout.addWidget(self.status_text)
+
+    # ---------------- FIX: INITIAL LOAD ----------------
+
+    def set_initial_columns(self, columns):
+        self.current_columns = columns
+        self.columns_btn.setText(f"{columns} Columns ▾")
+
+    def set_initial_rows(self, rows):
+        self.current_rows = rows
+        self.rows_btn.setText(f"{rows} Rows ▾")
+
+    def set_initial_volume(self, volume):
+        self.volume_slider.setValue(volume)
+
+    # ---------------- UI UPDATES ----------------
 
     def _update_volume_label(self, value):
         self.volume_label.setText(f"{value}%")
 
     def _open_columns_menu(self):
         menu = self._make_menu()
-        for n in range(2, 13):
+        for n in range(2, 9):
             menu.addAction(f"{n} Columns", lambda c=n: self._set_columns(c))
         menu.exec(self.columns_btn.mapToGlobal(self.columns_btn.rect().bottomLeft()))
 
     def _open_rows_menu(self):
         menu = self._make_menu()
-        for n in range(1, 13):
+        for n in range(1, 9):
             menu.addAction(f"{n} Rows", lambda r=n: self._set_rows(r))
         menu.exec(self.rows_btn.mapToGlobal(self.rows_btn.rect().bottomLeft()))
 
@@ -150,11 +172,12 @@ class TopBarWidget(QWidget):
 
     def set_vrchat_status(self, connected):
         if connected:
-            self.status_dot.setStyleSheet("color: #22cc55; font-size: 11px; background: transparent; border: none;")
+            self.status_dot.setStyleSheet(
+                "color: #22cc55; font-size: 11px; background: transparent; border: none;"
+            )
             self.status_text.setText("VRChat Connected")
         else:
-            self.status_dot.setStyleSheet("color: #cc3322; font-size: 11px; background: transparent; border: none;")
+            self.status_dot.setStyleSheet(
+                "color: #cc3322; font-size: 11px; background: transparent; border: none;"
+            )
             self.status_text.setText("VRChat Disconnected")
-
-    def set_initial_volume(self, volume):
-        self.volume_slider.setValue(volume)

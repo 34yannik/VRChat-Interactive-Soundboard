@@ -176,9 +176,19 @@ class MainWindow(QMainWindow):
         collections = self.data_manager.get_collections()
         self.sidebar.load_collections(collections)
 
-        saved_volume = self.data_manager.get_settings().get("volume", 75)
+        settings = self.data_manager.get_settings()
+
+        saved_volume = settings.get("volume", 75)
+        saved_columns = settings.get("columns", 4)
+        saved_rows = settings.get("rows", 3)
+
         self.top_bar.set_initial_volume(saved_volume)
+        self.top_bar.set_initial_columns(saved_columns)
+        self.top_bar.set_initial_rows(saved_rows)
         self.audio_player.set_volume(saved_volume)
+
+        self.sound_grid.set_columns(saved_columns)
+        self.sound_grid.set_rows(saved_rows)
 
         if collections:
             first_collection = collections[0]

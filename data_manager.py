@@ -2,8 +2,23 @@ import json
 import os
 import copy
 import fancify_text
+from PySide6.QtMultimedia import QMediaDevices
 
-SAVE_FILE = "vrc-interactive-soundboard-cfg.json"
+# ---------------- APPDATA PATH ----------------
+
+APPDATA_DIR = os.path.join(
+    os.getenv("APPDATA"),
+    "VRCInteractiveSoundboard"
+)
+
+os.makedirs(APPDATA_DIR, exist_ok=True)
+
+SAVE_FILE = os.path.join(
+    APPDATA_DIR,
+    "vrc-interactive-soundboard-cfg.json"
+)
+
+# ---------------- DEFAULT DATA ----------------
 
 DEFAULT_DATA = {
     "collections": [
@@ -19,14 +34,19 @@ DEFAULT_DATA = {
     "settings": {
         "volume": 75,
         "columns": 4,
-        "rows": 3,  # 👈 NEU
+        "rows": 3,
         "osc_host": "127.0.0.1",
         "osc_port": 9000,
-        "font": "sansSerif"
+        "font": "sansSerif",
+
+        # AUDIO SETTINGS
+        "enable_output": False,
+        "output_device": ""
     }
 }
 
 _INSTANCE = None
+
 
 def get_data_manager():
     global _INSTANCE
@@ -36,6 +56,7 @@ def get_data_manager():
 
 
 class DataManager:
+
     def __init__(self):
         self.data = self._load_data()
 
@@ -49,15 +70,18 @@ class DataManager:
                 if "settings" not in data:
                     data["settings"] = {}
 
-                # Defaults + Safety Fixes
+                # Defaults
                 data["settings"].setdefault("volume", 75)
                 data["settings"].setdefault("columns", 4)
-                data["settings"].setdefault("rows", 3)  # 👈 NEU
+                data["settings"].setdefault("rows", 3)
                 data["settings"].setdefault("osc_host", "127.0.0.1")
                 data["settings"].setdefault("osc_port", 9000)
                 data["settings"].setdefault("font", "sansSerif")
 
-                print("[LOAD RAW FILE]", data.get("settings"))
+                data["settings"].setdefault("enable_output", False)
+                data["settings"].setdefault("output_device", "")
+
+                print("[LOAD SETTINGS]", data.get("settings"))
 
                 return data
 
@@ -71,7 +95,10 @@ class DataManager:
         try:
             with open(SAVE_FILE, "w", encoding="utf-8") as f:
                 json.dump(self.data, f, indent=2, ensure_ascii=False)
+
+                print("[SAVE PATH]", SAVE_FILE)
                 print("[SAVE SNAPSHOT]", self.data["settings"])
+
         except Exception as e:
             print(f"Fehler beim Speichern: {e}")
 
@@ -82,23 +109,26 @@ class DataManager:
     def update_settings(self, key, value):
         self.data["settings"][key] = value
         self.save_data()
-        print("[UPDATE CALL]", key, value)
 
     def update_settings_bulk(self, updates: dict):
-        print("[SETTINGS BULK UPDATE]", updates)
         self.data["settings"].update(updates)
         self.save_data()
 
-    def get_font(self):
-        return self.data["settings"].get("font", "sansSerif")
+    # ---------------- AUDIO DEVICE LIST (FALLBACK SAFE) ----------------
+    def get_audio_outputs(self):
+        devices = QMediaDevices.audioOutputs()
+        names = [d.description() for d in devices]
 
-    def get_rows(self):
-        return self.data["settings"].get("rows", 3)
+        fallback = "Default Output"
+        saved = self.data["settings"].get("output_device", "")
 
-    def get_columns(self):
-        return self.data["settings"].get("columns", 4)
+        if saved and saved not in names:
+            print(f"[FALLBACK OUTPUT] '{saved}' not found → using default")
+            self.data["settings"]["output_device"] = fallback
 
-    # ---------------- FONT LIST (nur UI) ----------------
+        return names or [fallback]
+
+    # ---------------- FONT ----------------
     def get_all_fonts(self):
         fonts = [
             name for name in dir(fancify_text)
@@ -110,7 +140,14 @@ class DataManager:
         fonts.append("UwU")
         return fonts
 
-    # ---------------- COLLECTIONS ----------------
+    # ---------------- HELPERS ----------------
+    def get_output_device(self):
+        return self.data["settings"].get("output_device", "")
+
+    def is_output_enabled(self):
+        return self.data["settings"].get("enable_output", False)
+
+    # ---------------- COLLECTIONS / PAGES / SOUNDS (UNCHANGED) ----------------
     def get_collections(self):
         return self.data["collections"]
 
@@ -149,7 +186,6 @@ class DataManager:
         ]
         self.save_data()
 
-    # ---------------- PAGES ----------------
     def add_page_to_collection(self, collection_id, page_name):
         collection = self.get_collection(collection_id)
         if not collection:
@@ -189,7 +225,6 @@ class DataManager:
                 self.save_data()
                 return
 
-    # ---------------- SOUNDS ----------------
     def add_sound_to_page(self, collection_id, page_id, sound_data):
         collection = self.get_collection(collection_id)
         if not collection:
@@ -197,10 +232,10 @@ class DataManager:
 
         for page in collection["pages"]:
             if page["id"] == page_id:
+
                 existing_ids = [s["id"] for s in page["sounds"]]
                 new_id = max(existing_ids) + 1 if existing_ids else 1
 
-                # Optional: Limit based on grid size
                 max_slots = self.get_columns() * self.get_rows()
                 if len(page["sounds"]) >= max_slots:
                     print("[WARN] Max slots erreicht!")

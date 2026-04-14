@@ -1,8 +1,12 @@
 import threading
+import pygame
 
-# pygame wird fuer Audio genutzt
+from PySide6.QtCore import QUrl
+from PySide6.QtMultimedia import QMediaPlayer, QAudioOutput, QMediaDevices
+
+from data_manager import get_data_manager
+
 try:
-    import pygame
     pygame.mixer.init(frequency=44100, size=-16, channels=2, buffer=512)
     PYGAME_AVAILABLE = True
 except Exception as e:
@@ -11,53 +15,79 @@ except Exception as e:
 
 
 def get_audio_duration(file_path):
-    """Gibt die Laenge einer Audio-Datei als String zurueck (z.B. '0:03')"""
     try:
         if not PYGAME_AVAILABLE:
             return "0:00"
         sound = pygame.mixer.Sound(file_path)
         total_seconds = int(sound.get_length())
-        minutes = total_seconds // 60
-        seconds = total_seconds % 60
-        return f"{minutes}:{seconds:02d}"
+        return f"{total_seconds // 60}:{total_seconds % 60:02d}"
     except Exception:
         return "0:00"
 
 
-class AudioPlayer:
-    def __init__(self):
-        self.volume = 0.75  # Lautstaerke von 0.0 bis 1.0
-        self.currently_playing = []  # Liste aller aktiven Sound-Objekte
+def get_audio_inputs():
+    devices = QMediaDevices.audioInputs()
+    return [d.description() for d in devices] or ["Default Input"]
 
-    def set_volume(self, volume_percent):
-        """Setzt die Lautstaerke, volume_percent ist 0 bis 100"""
-        self.volume = volume_percent / 100.0
+
+def get_audio_outputs():
+    devices = QMediaDevices.audioOutputs()
+    return [d.description() for d in devices] or ["Default Output"]
+
+
+class AudioPlayer:
+
+    def __init__(self):
+        self.data_manager = get_data_manager()
+
+        self.player = QMediaPlayer()
+        self.audio_output = QAudioOutput()
+
+        self.player.setAudioOutput(self.audio_output)
+
+        self.audio_output.setVolume(
+            self.data_manager.get_settings().get("volume", 75) / 100.0
+        )
+
+        self._apply_output_device()
+
+    def _apply_output_device(self):
+        settings = self.data_manager.get_settings()
+        saved_name = settings.get("output_device", "")
+
+        devices = QMediaDevices.audioOutputs()
+
+        selected = None
+
+        if saved_name:
+            for d in devices:
+                if d.description() == saved_name:
+                    selected = d
+                    break
+
+        if selected is None and devices:
+            selected = devices[0]
+
+        if selected:
+            self.audio_output.setDevice(selected)
 
     def play_sound(self, file_path):
-        """Spielt einen Sound in einem separaten Thread ab"""
-        if not PYGAME_AVAILABLE:
-            print(f"[Simuliere Abspielen]: {file_path}")
+        if not self.data_manager.get_settings().get("enable_output", False):
             return
-        play_thread = threading.Thread(target=self._play_in_thread, args=(file_path,), daemon=True)
-        play_thread.start()
 
-    def _play_in_thread(self, file_path):
-        try:
-            sound = pygame.mixer.Sound(file_path)
-            sound.set_volume(self.volume)
-            channel = sound.play()
-            self.currently_playing.append(sound)
-            # Warten bis der Sound fertig ist, dann aus Liste entfernen
-            if channel:
-                while channel.get_busy():
-                    pygame.time.wait(100)
-            if sound in self.currently_playing:
-                self.currently_playing.remove(sound)
-        except Exception as e:
-            print(f"Fehler beim Abspielen von '{file_path}': {e}")
+        self._apply_output_device()
+
+        self.player.setSource(QUrl.fromLocalFile(file_path))
+        self.player.play()
 
     def stop_all(self):
-        """Stoppt alle laufenden Sounds"""
-        if PYGAME_AVAILABLE:
-            pygame.mixer.stop()
-        self.currently_playing.clear()
+        self.player.stop()
+
+    def set_volume(self, volume_percent):
+        self.audio_output.setVolume(volume_percent / 100.0)
+
+    def set_output_device(self, device_name):
+        settings = self.data_manager.get_settings()
+        settings["output_device"] = device_name
+        self.data_manager.save_data()
+        self._apply_output_device()
