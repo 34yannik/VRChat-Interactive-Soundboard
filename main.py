@@ -7,7 +7,7 @@ from main_window import MainWindow
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
-    app.setWindowIcon(QIcon("ressources/icon.ico"))
+    app.setWindowIcon(QIcon("resources/icon.ico"))
 
     window = MainWindow()
     window.show()

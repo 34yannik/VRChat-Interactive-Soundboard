@@ -1,62 +1,69 @@
 # VRC Interact Soundboard
+A specialized soundboard for VRChat — control sound, chatbox messages, and avatar parameters through a single, unified interface.
 
-Ein Soundboard speziell fuer VRChat - steuert Sound, Chatbox und Avatar-Parameter ueber eine einzige Oberflaeche.
+![App Icon](resources/icon.png)
 
 ## Features
+* **Collections**: Organize sounds into logical groups (e.g., Gaming Memes, Roleplay FX, etc.).
+* **Pages**: Support for multiple pages per collection for maximum organization.
+* **Audio Playback**: Support for MP3, WAV, OGG, and FLAC via click or customizable hotkeys.
+* **OSC Chatbox**: Automatically send custom messages to the VRChat chatbox whenever a sound is played.
+* **VRChat Status**: Real-time indicator showing if the VRChat OSC connection is active.
+* **Search**: Quickly find specific sounds by name.
+* **Settings**: Fully configurable OSC Host/Port and Chatbox Font settings.
 
-- **Collections** - Sounds in Sammlungen (Gaming Memes, Roleplay FX, etc.) organisieren
-- **Pages** - Mehrere Seiten pro Collection (Page 1, Page 2, Voice Mods...)
-- **Sound abspielen** - MP3, WAV, OGG, FLAC per Klick oder Hotkey
-- **Wellenform-Animation** - Visuelle Rueckmeldung beim Abspielen
-- **OSC Chatbox** - Automatisch eine Nachricht in VRChat senden wenn ein Sound spielt
-- **VRChat Status** - Zeigt ob VRChat verbunden ist
-- **Suche** - Sounds nach Name suchen
-- **Einstellungen** - OSC Host und Port konfigurieren
+---
+
+## Interface Overview
+The main interface provides quick access to your collections, pages and sounds.
+
+![Main Interface](resources/WindowPicture.png)
+
+---
 
 ## Installation
 
-```bash
-# 1. Python 3.11 vorausgesetzt
+### Prerequisites
+* **Python 3.11** or higher is required.
 
-# 2. Abhaengigkeiten installieren
-pip install -r requirements.txt
+### Steps
+1.  **Install dependencies:**
+    ```bash
+    pip install -r requirements.txt
+    ```
 
-# 3. Starten
-python main.py
-```
+2.  **Launch the application:**
+    ```bash
+    python main.py
+    ```
 
-## Projektstruktur
+---
 
-```
-vrc_soundboard/
-├── main.py              # Einstiegspunkt
-├── main_window.py       # Hauptfenster - verbindet alles
-├── sidebar_widget.py    # Linke Leiste mit Collections
-├── topbar_widget.py     # Obere Leiste (Suche, Lautstaerke, Status)
-├── pages_tabbar.py      # Tab-Leiste (Page 1, Page 2...)
-├── sound_grid.py        # Das Grid mit allen Sound-Karten
-├── sound_card.py        # Einzelne Sound-Karte
-├── waveform_widget.py   # Animierte Wellenform-Anzeige
-├── data_manager.py      # Daten laden und speichern (JSON)
-├── audio_player.py      # Sound-Wiedergabe mit pygame
-├── osc_client.py        # OSC-Kommunikation mit VRChat
-├── dialogs.py           # Dialoge (Sound hinzufuegen, Einstellungen)
-└── requirements.txt     # Python-Pakete
-```
+## VRChat OSC Setup
+To allow the soundboard to communicate with VRChat, follow these steps:
 
-## VRChat OSC einrichten
+1.  **In VRChat:** Go to `Settings -> OSC -> Enable`.
+2.  **Default Connection:** Use Port `9000` and Host `127.0.0.1`.
+3.  **In the Soundboard:** Navigate to the Settings window to verify your OSC configuration and customize your Chatbox font.
 
-1. In VRChat: Settings -> OSC -> Enable
-2. Standard-Port: 9000 (Host: 127.0.0.1)
-3. Im Soundboard: Settings -> OSC-Einstellungen prüfen
+![Settings Window](resources/Settings-WindowPicture.png)
 
-## Sound hinzufuegen
+---
 
-1. Eine Collection links auswählen
-2. Auf das "+" / "Add Sound" Feld klicken
-3. Name, Icon, Hotkey und Datei auswählen
-4. Optional: OSC Chatbox-Nachricht eingeben
+## Adding Sounds
+1.  Select a **Collection** from the left-hand sidebar.
+2.  Click the **"+" / "Add Sound"** button.
+3.  In the configuration window, set the following:
+    * **Name & Icon**: Choose a display name and an Emoji icon.
+    * **Hotkey**: Assign a keyboard shortcut for quick triggering.
+    * **OSC Chatbox Message**: (Optional) Text to be sent to VRChat when the sound plays.
+    * **File**: Select your audio file.
 
-## Daten
+![Add Sound Window](resources/Add-Sound-WindowPicture.png)
 
-Alle Daten werden in `soundboard_data.json` im Programmordner gespeichert.
+---
+
+## Data & Configuration
+All your settings, collections, and sound mappings are stored locally in:
+`vrc-interactive-soundboard-cfg.json` 
+inside the program folder. Back up this file to save your configurations or share it with others!
