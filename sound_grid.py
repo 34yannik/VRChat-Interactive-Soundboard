@@ -4,32 +4,41 @@ from PySide6.QtCore import Qt, Signal
 
 from sound_card import SoundCard
 
+BASE_CARD_SIZE = 210
+MIN_CARD_SIZE = 80
+
+
+def card_size_for_columns(columns):
+    """Berechnet die Kartengröße anhand der Spaltenanzahl"""
+    size = int(BASE_CARD_SIZE * (4 / columns))
+    return max(size, MIN_CARD_SIZE)
+
 
 class AddSoundCard(QFrame):
-    """Der Plus-Button zum Hinzufuegen neuer Sounds"""
-
     clicked = Signal()
 
-    def __init__(self, parent=None):
+    def __init__(self, size=BASE_CARD_SIZE, parent=None):
         super().__init__(parent)
-        self.setFixedSize(210, 210)
+        self.setFixedSize(size, size)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
 
         layout = QVBoxLayout(self)
         layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.setSpacing(6)
 
+        font_size = max(16, int(32 * size / BASE_CARD_SIZE))
+        text_size = max(9, int(13 * size / BASE_CARD_SIZE))
+
         plus_label = QLabel("+")
         plus_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        plus_label.setStyleSheet("color: #555577; font-size: 32px; background: transparent;")
+        plus_label.setStyleSheet(f"color: #555577; font-size: {font_size}px; background: transparent;")
 
         text_label = QLabel("Add Sound")
         text_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        text_label.setStyleSheet("color: #555577; font-size: 13px; background: transparent;")
+        text_label.setStyleSheet(f"color: #555577; font-size: {text_size}px; background: transparent;")
 
         layout.addWidget(plus_label)
         layout.addWidget(text_label)
-
         self._apply_style()
 
     def _apply_style(self):
@@ -51,14 +60,13 @@ class AddSoundCard(QFrame):
 
 
 class SoundGrid(QWidget):
-    """Zeigt alle Sound-Karten in einem konfigurierbarem Grid an"""
-
     sound_clicked = Signal(dict)
     add_sound_clicked = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self.number_of_columns = 4
+        self.number_of_rows = 4  # für spätere Nutzung (z.B. feste Seitenanzahl)
         self.sound_cards = []
         self._setup_ui()
 
@@ -67,33 +75,17 @@ class SoundGrid(QWidget):
         main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.setSpacing(0)
 
-        # Scrollbarer Bereich fuer viele Sounds
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
         scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         scroll_area.setStyleSheet("""
-            QScrollArea {
-                border: none;
-                background: transparent;
-            }
-            QScrollBar:vertical {
-                background: #0d0d18;
-                width: 6px;
-                border-radius: 3px;
-            }
-            QScrollBar::handle:vertical {
-                background: #2a2a45;
-                border-radius: 3px;
-            }
-            QScrollBar::handle:vertical:hover {
-                background: #4a4a70;
-            }
-            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
-                height: 0px;
-            }
+            QScrollArea { border: none; background: transparent; }
+            QScrollBar:vertical { background: #0d0d18; width: 6px; border-radius: 3px; }
+            QScrollBar::handle:vertical { background: #2a2a45; border-radius: 3px; }
+            QScrollBar::handle:vertical:hover { background: #4a4a70; }
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0px; }
         """)
 
-        # Container in dem das Grid liegt
         self.grid_container = QWidget()
         self.grid_container.setStyleSheet("background: transparent;")
 
@@ -106,15 +98,15 @@ class SoundGrid(QWidget):
         main_layout.addWidget(scroll_area)
 
     def load_sounds(self, sounds_list):
-        """Alle Sound-Karten neu aufbauen basierend auf der uebergebenen Liste"""
         self._clear_grid()
         self.sound_cards = []
 
+        card_size = card_size_for_columns(self.number_of_columns)
         current_row = 0
         current_column = 0
 
         for sound_data in sounds_list:
-            card = SoundCard(sound_data)
+            card = SoundCard(sound_data, size=card_size)
             card.clicked.connect(self.sound_clicked.emit)
             card.right_clicked.connect(self._on_right_click)
             self.sound_cards.append(card)
@@ -125,31 +117,27 @@ class SoundGrid(QWidget):
                 current_column = 0
                 current_row += 1
 
-        # Plus-Karte am Ende hinzufuegen
-        add_card = AddSoundCard()
+        add_card = AddSoundCard(size=card_size)
         add_card.clicked.connect(self.add_sound_clicked.emit)
         self.grid_layout.addWidget(add_card, current_row, current_column)
 
     def _clear_grid(self):
-        """Entfernt alle bestehenden Karten aus dem Grid"""
         while self.grid_layout.count():
             item = self.grid_layout.takeAt(0)
             if item.widget():
                 item.widget().deleteLater()
 
     def set_columns(self, columns):
-        """Setzt die Anzahl der Spalten und baut das Grid neu auf"""
         self.number_of_columns = columns
-        # Alle bestehenden Karten sammeln und neu anordnen
         sound_data_list = [card.sound_data for card in self.sound_cards]
         self.load_sounds(sound_data_list)
 
+    def set_rows(self, rows):
+        self.number_of_rows = rows
+
     def stop_all_animations(self):
-        """Stoppt alle laufenden Animationen"""
         for card in self.sound_cards:
             card.set_playing(False)
 
     def _on_right_click(self, sound_data):
-        """Rechtsklick auf eine Karte - z.B. fuer Loeschen"""
-        # Wird spaeter mit Kontextmenu erweitert
         print(f"Rechtsklick auf: {sound_data.get('name')}")

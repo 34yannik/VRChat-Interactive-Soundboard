@@ -6,7 +6,7 @@ from PySide6.QtCore import Qt
 import fancify_text
 from data_manager import get_data_manager
 
-# Gemeinsamer Style fuer alle Dialoge
+# Shared style for all dialogs
 DIALOG_STYLE = """
     QDialog {
         background-color: #0d0d1e;
@@ -64,11 +64,11 @@ CONFIRM_BTN_STYLE = """
 
 
 class AddSoundDialog(QDialog):
-    """Fenster zum Hinzufuegen eines neuen Sounds zur aktuellen Page"""
+    """Window for adding a new sound to the current page"""
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Sound hinzufuegen")
+        self.setWindowTitle("Add Sound")
         self.setFixedSize(420, 330)
         self.selected_file_path = ""
         self._setup_ui()
@@ -79,18 +79,18 @@ class AddSoundDialog(QDialog):
         layout.setSpacing(14)
         layout.setContentsMargins(22, 20, 22, 20)
 
-        # Titel
-        title_label = QLabel("Neuen Sound hinzufuegen")
+        # Title
+        title_label = QLabel("Add New Sound")
         title_label.setStyleSheet("color: white; font-size: 16px; font-weight: bold;")
         layout.addWidget(title_label)
 
-        # Formular
+        # Form
         form = QFormLayout()
         form.setSpacing(10)
         form.setLabelAlignment(Qt.AlignmentFlag.AlignRight)
 
         self.name_input = QLineEdit()
-        self.name_input.setPlaceholderText("z.B. Bruh Sound Effect #2")
+        self.name_input.setPlaceholderText("e.g. Bruh Sound Effect #2")
         form.addRow("Name:", self.name_input)
 
         self.icon_input = QLineEdit()
@@ -100,21 +100,21 @@ class AddSoundDialog(QDialog):
         form.addRow("Icon (Emoji):", self.icon_input)
 
         self.hotkey_input = QLineEdit()
-        self.hotkey_input.setPlaceholderText("z.B. NUM 1")
+        self.hotkey_input.setPlaceholderText("e.g. NUM 1")
         form.addRow("Hotkey:", self.hotkey_input)
 
         self.osc_message_input = QLineEdit()
-        self.osc_message_input.setPlaceholderText("z.B. *bruh* (leer = keine Nachricht)")
+        self.osc_message_input.setPlaceholderText("e.g. *bruh* (empty = no message)")
         form.addRow("OSC Chatbox:", self.osc_message_input)
 
         layout.addLayout(form)
 
-        # Datei-Auswahl
+        # File selection
         file_row = QHBoxLayout()
-        self.file_name_label = QLabel("Keine Datei ausgewaehlt")
+        self.file_name_label = QLabel("No file selected")
         self.file_name_label.setStyleSheet("color: #555577; font-size: 12px; background: transparent;")
 
-        browse_btn = QPushButton("Datei waehlen...")
+        browse_btn = QPushButton("Select File...")
         browse_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         browse_btn.clicked.connect(self._open_file_dialog)
         browse_btn.setStyleSheet(CANCEL_BTN_STYLE)
@@ -125,16 +125,16 @@ class AddSoundDialog(QDialog):
 
         layout.addStretch()
 
-        # Bestaetigungs-Buttons
+        # Confirm buttons
         button_row = QHBoxLayout()
         button_row.addStretch()
 
-        cancel_btn = QPushButton("Abbrechen")
+        cancel_btn = QPushButton("Cancel")
         cancel_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         cancel_btn.clicked.connect(self.reject)
         cancel_btn.setStyleSheet(CANCEL_BTN_STYLE)
 
-        add_btn = QPushButton("Hinzufuegen")
+        add_btn = QPushButton("Add")
         add_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         add_btn.clicked.connect(self.accept)
         add_btn.setStyleSheet(CONFIRM_BTN_STYLE)
@@ -146,9 +146,9 @@ class AddSoundDialog(QDialog):
     def _open_file_dialog(self):
         file_path, _ = QFileDialog.getOpenFileName(
             self,
-            "Audio-Datei auswaehlen",
+            "Select Audio File",
             "",
-            "Audio-Dateien (*.mp3 *.wav *.ogg *.flac *.m4a);;Alle Dateien (*.*)"
+            "Audio Files (*.mp3 *.wav *.ogg *.flac *.m4a);;All Files (*.*)"
         )
         if file_path:
             self.selected_file_path = file_path
@@ -156,31 +156,31 @@ class AddSoundDialog(QDialog):
             self.file_name_label.setText(file_name)
             self.file_name_label.setStyleSheet("color: #aaaacc; font-size: 12px; background: transparent;")
 
-            # Name automatisch befuellen wenn noch leer
+            # Auto-fill name if empty
             if not self.name_input.text():
                 name_without_extension = os.path.splitext(file_name)[0]
                 self.name_input.setText(name_without_extension)
 
     def get_sound_data(self):
-        """Gibt alle eingegebenen Daten als Dictionary zurueck"""
+        """Returns all entered data as a dictionary"""
         return {
-            "name": self.name_input.text().strip() or "Unbekannter Sound",
+            "name": self.name_input.text().strip() or "Unknown Sound",
             "icon": self.icon_input.text().strip() or "🔊",
             "hotkey": self.hotkey_input.text().strip(),
             "osc_message": self.osc_message_input.text().strip(),
             "file_path": self.selected_file_path,
-            "duration": "0:00"  # wird nach dem Hinzufuegen berechnet
+            "duration": "0:00"  # will be calculated after adding
         }
 
 
 class AddCollectionDialog(QDialog):
-    """Fenster zum Erstellen einer neuen Collection"""
+    """Window for creating a new collection"""
 
     AVAILABLE_ICONS = ["🎮", "🎭", "🎵", "💥", "😂", "🔊", "🎤", "🎸", "🌟", "🔥", "🎯", "🎲"]
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Collection erstellen")
+        self.setWindowTitle("Create Collection")
         self.setFixedSize(360, 220)
         self._setup_ui()
         self.setStyleSheet(DIALOG_STYLE)
@@ -190,7 +190,7 @@ class AddCollectionDialog(QDialog):
         layout.setSpacing(14)
         layout.setContentsMargins(22, 20, 22, 20)
 
-        title_label = QLabel("Neue Collection erstellen")
+        title_label = QLabel("Create New Collection")
         title_label.setStyleSheet("color: white; font-size: 16px; font-weight: bold;")
         layout.addWidget(title_label)
 
@@ -198,7 +198,7 @@ class AddCollectionDialog(QDialog):
         form.setSpacing(10)
 
         self.name_input = QLineEdit()
-        self.name_input.setPlaceholderText("z.B. Funny Moments")
+        self.name_input.setPlaceholderText("e.g. Funny Moments")
         form.addRow("Name:", self.name_input)
 
         self.icon_combo = QComboBox()
@@ -212,12 +212,12 @@ class AddCollectionDialog(QDialog):
         button_row = QHBoxLayout()
         button_row.addStretch()
 
-        cancel_btn = QPushButton("Abbrechen")
+        cancel_btn = QPushButton("Cancel")
         cancel_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         cancel_btn.clicked.connect(self.reject)
         cancel_btn.setStyleSheet(CANCEL_BTN_STYLE)
 
-        create_btn = QPushButton("Erstellen")
+        create_btn = QPushButton("Create")
         create_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         create_btn.clicked.connect(self.accept)
         create_btn.setStyleSheet(CONFIRM_BTN_STYLE)
@@ -228,17 +228,17 @@ class AddCollectionDialog(QDialog):
 
     def get_data(self):
         return {
-            "name": self.name_input.text().strip() or "Neue Collection",
+            "name": self.name_input.text().strip() or "New Collection",
             "icon": self.icon_combo.currentText()
         }
 
 class DeleteCollectionDialog(QDialog):
-    """Sicherheitsdialog zum Löschen einer Collection"""
+    """Safety dialog for deleting a collection"""
 
     def __init__(self, collection_name, parent=None):
         super().__init__(parent)
 
-        self.setWindowTitle("Collection löschen")
+        self.setWindowTitle("Delete Collection")
         self.setFixedSize(320, 160)
 
         self._setup_ui(collection_name)
@@ -283,14 +283,14 @@ class DeleteCollectionDialog(QDialog):
         layout.addLayout(btn_row)
 
 class EditCollectionDialog(QDialog):
-    """Fenster zum Bearbeiten einer Collection"""
+    """Window for editing a collection"""
 
     AVAILABLE_ICONS = ["🎮", "🎭", "🎵", "💥", "😂", "🔊", "🎤", "🎸", "🌟", "🔥", "🎯", "🎲"]
 
     def __init__(self, current_name, current_icon, parent=None):
         super().__init__(parent)
 
-        self.setWindowTitle("Collection bearbeiten")
+        self.setWindowTitle("Edit Collection")
         self.setFixedSize(360, 220)
 
         self._setup_ui(current_name, current_icon)
@@ -301,7 +301,7 @@ class EditCollectionDialog(QDialog):
         layout.setSpacing(14)
         layout.setContentsMargins(22, 20, 22, 20)
 
-        title_label = QLabel("Collection bearbeiten")
+        title_label = QLabel("Edit Collection")
         title_label.setStyleSheet("color: white; font-size: 16px; font-weight: bold;")
         layout.addWidget(title_label)
 
@@ -316,7 +316,7 @@ class EditCollectionDialog(QDialog):
         for icon in self.AVAILABLE_ICONS:
             self.icon_combo.addItem(icon)
 
-        # aktuelles Icon setzen
+        # set current icon
         index = self.icon_combo.findText(current_icon)
         if index >= 0:
             self.icon_combo.setCurrentIndex(index)
@@ -329,12 +329,12 @@ class EditCollectionDialog(QDialog):
         button_row = QHBoxLayout()
         button_row.addStretch()
 
-        cancel_btn = QPushButton("Abbrechen")
+        cancel_btn = QPushButton("Cancel")
         cancel_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         cancel_btn.clicked.connect(self.reject)
         cancel_btn.setStyleSheet(CANCEL_BTN_STYLE)
 
-        save_btn = QPushButton("Speichern")
+        save_btn = QPushButton("Save")
         save_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         save_btn.clicked.connect(self.accept)
         save_btn.setStyleSheet(CONFIRM_BTN_STYLE)
@@ -351,12 +351,12 @@ class EditCollectionDialog(QDialog):
         }
 
 class EditPageDialog(QDialog):
-    """Dialog zum Bearbeiten eines Page-Namens"""
+    """Dialog for editing a page name"""
 
     def __init__(self, current_name, parent=None):
         super().__init__(parent)
 
-        self.setWindowTitle("Page bearbeiten")
+        self.setWindowTitle("Edit Page")
         self.setFixedSize(360, 200)
 
         self._setup_ui(current_name)
@@ -367,7 +367,7 @@ class EditPageDialog(QDialog):
         layout.setSpacing(14)
         layout.setContentsMargins(22, 20, 22, 20)
 
-        title = QLabel("Page bearbeiten")
+        title = QLabel("Edit Page")
         title.setStyleSheet("color: white; font-size: 16px; font-weight: bold;")
         layout.addWidget(title)
 
@@ -376,7 +376,7 @@ class EditPageDialog(QDialog):
 
         self.name_input = QLineEdit()
         self.name_input.setText(current_name)
-        self.name_input.setPlaceholderText("z.B. Main Sounds")
+        self.name_input.setPlaceholderText("e.g. Main Sounds")
 
         form.addRow("Name:", self.name_input)
 
@@ -386,12 +386,12 @@ class EditPageDialog(QDialog):
         button_row = QHBoxLayout()
         button_row.addStretch()
 
-        cancel_btn = QPushButton("Abbrechen")
+        cancel_btn = QPushButton("Cancel")
         cancel_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         cancel_btn.clicked.connect(self.reject)
         cancel_btn.setStyleSheet(CANCEL_BTN_STYLE)
 
-        save_btn = QPushButton("Speichern")
+        save_btn = QPushButton("Save")
         save_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         save_btn.clicked.connect(self.accept)
         save_btn.setStyleSheet(CONFIRM_BTN_STYLE)
@@ -405,12 +405,12 @@ class EditPageDialog(QDialog):
         return self.name_input.text().strip() or "Page"
 
 class DeletePageDialog(QDialog):
-    """Sicherheitsdialog zum Löschen einer Page"""
+    """Safety dialog for deleting a page"""
 
     def __init__(self, page_name, parent=None):
         super().__init__(parent)
 
-        self.setWindowTitle("Page löschen")
+        self.setWindowTitle("Delete Page")
         self.setFixedSize(320, 160)
 
         self._setup_ui(page_name)
@@ -457,11 +457,11 @@ class DeletePageDialog(QDialog):
         layout.addLayout(btn_row)
 
 class SettingsDialog(QDialog):
-    """Einstellungs-Fenster fuer OSC und andere Optionen"""
+    """Settings window for OSC and other options"""
 
     def __init__(self, current_settings, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Einstellungen")
+        self.setWindowTitle("Settings")
         self.setFixedSize(400, 320)
         self.current_settings = current_settings
         self._setup_ui()
@@ -472,12 +472,12 @@ class SettingsDialog(QDialog):
         layout.setSpacing(14)
         layout.setContentsMargins(22, 20, 22, 20)
 
-        title_label = QLabel("Einstellungen")
+        title_label = QLabel("Settings")
         title_label.setStyleSheet("color: white; font-size: 16px; font-weight: bold;")
         layout.addWidget(title_label)
 
-        # OSC-Einstellungen
-        osc_label = QLabel("VRChat OSC Verbindung")
+        # OSC settings
+        osc_label = QLabel("VRChat OSC Connection")
         osc_label.setStyleSheet("color: #777799; font-size: 11px; font-weight: bold; letter-spacing: 1px;")
         layout.addWidget(osc_label)
 
@@ -522,12 +522,12 @@ class SettingsDialog(QDialog):
 
         layout.addWidget(self.font_dropdown)
 
-        cancel_btn = QPushButton("Abbrechen")
+        cancel_btn = QPushButton("Cancel")
         cancel_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         cancel_btn.clicked.connect(self.reject)
         cancel_btn.setStyleSheet(CANCEL_BTN_STYLE)
 
-        save_btn = QPushButton("Speichern")
+        save_btn = QPushButton("Save")
         save_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         save_btn.clicked.connect(self.save_and_close)
         save_btn.setStyleSheet(CONFIRM_BTN_STYLE)

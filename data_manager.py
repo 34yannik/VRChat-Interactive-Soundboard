@@ -19,6 +19,7 @@ DEFAULT_DATA = {
     "settings": {
         "volume": 75,
         "columns": 4,
+        "rows": 3,  # 👈 NEU
         "osc_host": "127.0.0.1",
         "osc_port": 9000,
         "font": "sansSerif"
@@ -33,15 +34,9 @@ def get_data_manager():
         _INSTANCE = DataManager()
     return _INSTANCE
 
+
 class DataManager:
     def __init__(self):
-        import traceback
-
-        print("\n[DM CREATED]")
-        print("[DM ID]", id(self))
-        print("[DM STACK TRACE]")
-        traceback.print_stack(limit=5)
-
         self.data = self._load_data()
 
     # ---------------- LOAD ----------------
@@ -57,6 +52,7 @@ class DataManager:
                 # Defaults + Safety Fixes
                 data["settings"].setdefault("volume", 75)
                 data["settings"].setdefault("columns", 4)
+                data["settings"].setdefault("rows", 3)  # 👈 NEU
                 data["settings"].setdefault("osc_host", "127.0.0.1")
                 data["settings"].setdefault("osc_port", 9000)
                 data["settings"].setdefault("font", "sansSerif")
@@ -90,12 +86,17 @@ class DataManager:
 
     def update_settings_bulk(self, updates: dict):
         print("[SETTINGS BULK UPDATE]", updates)
-
         self.data["settings"].update(updates)
         self.save_data()
 
     def get_font(self):
         return self.data["settings"].get("font", "sansSerif")
+
+    def get_rows(self):
+        return self.data["settings"].get("rows", 3)
+
+    def get_columns(self):
+        return self.data["settings"].get("columns", 4)
 
     # ---------------- FONT LIST (nur UI) ----------------
     def get_all_fonts(self):
@@ -198,6 +199,12 @@ class DataManager:
             if page["id"] == page_id:
                 existing_ids = [s["id"] for s in page["sounds"]]
                 new_id = max(existing_ids) + 1 if existing_ids else 1
+
+                # Optional: Limit based on grid size
+                max_slots = self.get_columns() * self.get_rows()
+                if len(page["sounds"]) >= max_slots:
+                    print("[WARN] Max slots erreicht!")
+                    return None
 
                 sound_data["id"] = new_id
                 page["sounds"].append(sound_data)

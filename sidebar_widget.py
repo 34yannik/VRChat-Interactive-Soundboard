@@ -197,44 +197,6 @@ class SidebarWidget(QWidget):
         separator.setFixedHeight(1)
         main_layout.addWidget(separator)
 
-        # Storage-Anzeige unten
-        storage_widget = QWidget()
-        storage_widget.setFixedHeight(56)
-        storage_widget.setStyleSheet("background: transparent;")
-        storage_layout = QVBoxLayout(storage_widget)
-        storage_layout.setContentsMargins(16, 8, 16, 10)
-        storage_layout.setSpacing(4)
-
-        storage_row = QHBoxLayout()
-        storage_text = QLabel("Storage")
-        storage_text.setStyleSheet("color: #555577; font-size: 11px; background: transparent;")
-        self.storage_amount_label = QLabel("0 / 5GB")
-        self.storage_amount_label.setStyleSheet("color: #555577; font-size: 11px; background: transparent;")
-        storage_row.addWidget(storage_text)
-        storage_row.addStretch()
-        storage_row.addWidget(self.storage_amount_label)
-
-        self.storage_progress_bar = QProgressBar()
-        self.storage_progress_bar.setRange(0, 100)
-        self.storage_progress_bar.setValue(24)
-        self.storage_progress_bar.setTextVisible(False)
-        self.storage_progress_bar.setFixedHeight(3)
-        self.storage_progress_bar.setStyleSheet("""
-            QProgressBar {
-                background-color: #1e1e35;
-                border-radius: 2px;
-                border: none;
-            }
-            QProgressBar::chunk {
-                background-color: #4a6cf7;
-                border-radius: 2px;
-            }
-        """)
-
-        storage_layout.addLayout(storage_row)
-        storage_layout.addWidget(self.storage_progress_bar)
-        main_layout.addWidget(storage_widget)
-
     def load_collections(self, collections_list, active_id=None):
         """Laedt alle Collections in die Sidebar"""
         # Bestehende Items entfernen
@@ -269,9 +231,3 @@ class SidebarWidget(QWidget):
         if collection_id in self.collection_items:
             self.collection_items[collection_id].set_active(True)
         self.collection_selected.emit(collection_id)
-
-    def update_storage_display(self, used_gb, total_gb=5.0):
-        """Aktualisiert die Speicheranzeige"""
-        self.storage_amount_label.setText(f"{used_gb:.1f} / {total_gb}GB")
-        percentage = int((used_gb / total_gb) * 100)
-        self.storage_progress_bar.setValue(min(percentage, 100))

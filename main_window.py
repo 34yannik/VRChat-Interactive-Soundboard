@@ -16,7 +16,7 @@ from dialogs import AddSoundDialog, AddCollectionDialog, SettingsDialog, EditCol
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("VRC Interact Soundboard")
+        self.setWindowTitle("VRC Interactive Soundboard")
         self.resize(1300, 820)
         self.setMinimumSize(900, 600)
 
@@ -49,6 +49,7 @@ class MainWindow(QMainWindow):
         self.top_bar = TopBarWidget()
         self.top_bar.volume_changed.connect(self._on_volume_changed)
         self.top_bar.columns_changed.connect(self._on_columns_changed)
+        self.top_bar.rows_changed.connect(self._on_rows_changed)
         self.top_bar.search_changed.connect(self._on_search_text_changed)
         self.top_bar.settings_clicked.connect(self._open_settings_dialog)
         root_layout.addWidget(self.top_bar)
@@ -65,7 +66,6 @@ class MainWindow(QMainWindow):
         self.sidebar.collection_selected.connect(self._on_collection_selected)
         self.sidebar.add_collection_clicked.connect(self._open_add_collection_dialog)
         main_area_layout.addWidget(self.sidebar)
-
         # Vertikale Trennlinie zwischen Sidebar und Content
         vertical_separator = QFrame()
         vertical_separator.setFrameShape(QFrame.Shape.VLine)
@@ -145,7 +145,7 @@ class MainWindow(QMainWindow):
         layout.addStretch()
 
         # Stop-All Button (roter Button oben rechts)
-        self.stop_all_button = QPushButton("⏹  Stop All (Esc)")
+        self.stop_all_button = QPushButton(" Stop All (Esc)")
         self.stop_all_button.setCursor(Qt.CursorShape.PointingHandCursor)
         self.stop_all_button.clicked.connect(self._stop_all_sounds)
         self.stop_all_button.setStyleSheet("""
@@ -359,6 +359,10 @@ class MainWindow(QMainWindow):
             self._show_collection(
                 self.data_manager.get_collection(self.active_collection_id)
             )
+
+    def _on_rows_changed(self, rows):
+        self.sound_grid.set_rows(rows)
+        self.data_manager.update_settings("rows", rows)
 
     # --- Dialog-Oeffner ---
 
