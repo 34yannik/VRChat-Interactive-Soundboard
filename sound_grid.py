@@ -68,7 +68,7 @@ class SoundGrid(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.number_of_columns = 4
-        self.number_of_rows = 4  # für spätere Nutzung (z.B. feste Seitenanzahl)
+        self.number_of_rows = 4  # Beibehalten für spätere Nutzung
         self.sound_cards = []
         self._setup_ui()
 
@@ -110,12 +110,11 @@ class SoundGrid(QWidget):
         for sound_data in sounds_list:
             card = SoundCard(sound_data, size=card_size)
             card.clicked.connect(self.sound_clicked.emit)
-
             card.right_clicked.connect(self.sound_right_clicked_action)
+
+            # FIX: Nur ein einziges Mal zur Liste hinzufügen!
             self.sound_cards.append(card)
 
-            card.right_clicked.connect(self._on_right_click)
-            self.sound_cards.append(card)
             self.grid_layout.addWidget(card, current_row, current_column)
 
             current_column += 1
@@ -127,24 +126,35 @@ class SoundGrid(QWidget):
         add_card.clicked.connect(self.add_sound_clicked.emit)
         self.grid_layout.addWidget(add_card, current_row, current_column)
 
+    def set_columns(self, columns):
+        self.number_of_columns = columns
+        # Daten sichern, bevor die Widgets gelöscht werden
+        sound_data_list = [card.sound_data for card in self.sound_cards]
+        self.load_sounds(sound_data_list)
+
+    # --- WIEDER EINGEFÜGTE METHODEN ---
+
+    def set_rows(self, rows):
+        """Setzt die Anzahl der Reihen"""
+        self.number_of_rows = rows
+
+    def stop_all_animations(self):
+        """Stoppt die Wellenform-Animation auf allen Karten"""
+        for card in self.sound_cards:
+            card.set_playing(False)
+
+    # ----------------------------------
+
     def sound_right_clicked_action(self, sound_data):
-        """Erzeugt ein Kontextmenü an der Mausposition"""
         menu = QMenu(self)
         menu.setStyleSheet("""
-            QMenu {
-                background-color: #16162a;
-                color: white;
-                border: 1px solid #2a2a45;
-            }
-            QMenu::item:selected {
-                background-color: #4a6cf7;
-            }
+            QMenu { background-color: #16162a; color: white; border: 1px solid #2a2a45; }
+            QMenu::item:selected { background-color: #4a6cf7; }
         """)
 
         edit_action = menu.addAction("Edit Sound")
         delete_action = menu.addAction("Delete Sound")
 
-        # Menü an der aktuellen Mausposition anzeigen
         action = menu.exec(self.cursor().pos())
 
         if action == edit_action:
@@ -157,18 +167,3 @@ class SoundGrid(QWidget):
             item = self.grid_layout.takeAt(0)
             if item.widget():
                 item.widget().deleteLater()
-
-    def set_columns(self, columns):
-        self.number_of_columns = columns
-        sound_data_list = [card.sound_data for card in self.sound_cards]
-        self.load_sounds(sound_data_list)
-
-    def set_rows(self, rows):
-        self.number_of_rows = rows
-
-    def stop_all_animations(self):
-        for card in self.sound_cards:
-            card.set_playing(False)
-
-    def _on_right_click(self, sound_data):
-        print(f"Rechtsklick auf: {sound_data.get('name')}")

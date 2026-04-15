@@ -309,7 +309,6 @@ class MainWindow(QMainWindow):
             self._show_collection(collection)
 
     def _on_edit_sound(self, sound_data):
-        # Wir übergeben sound_data einfach an den Konstruktor
         dialog = EditSoundDialog(sound_data, self)
 
         if dialog.exec() == QDialog.DialogCode.Accepted:

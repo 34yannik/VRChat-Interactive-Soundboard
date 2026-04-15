@@ -15,7 +15,7 @@ os.makedirs(APPDATA_DIR, exist_ok=True)
 
 SAVE_FILE = os.path.join(
     APPDATA_DIR,
-    "vrc-interactive-soundboard-cfg.json"
+    "soundboard-config.json"
 )
 
 # ---------------- DEFAULT DATA ----------------
