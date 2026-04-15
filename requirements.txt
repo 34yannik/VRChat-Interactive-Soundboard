@@ -3,3 +3,4 @@ pygame>=2.5.0
 python-osc>=1.8.0
 uwuify>=1.2.0
 fancify-text>=0.1.0
+keyboard>=0.13.5

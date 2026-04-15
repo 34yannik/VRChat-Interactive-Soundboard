@@ -1,5 +1,6 @@
-from PySide6.QtWidgets import QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QLabel, QPushButton, QFrame, QInputDialog, QMessageBox
-from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QLabel, QPushButton, QFrame, QInputDialog, \
+    QMessageBox, QDialog
+from PySide6.QtCore import Qt, Signal, QObject
 from PySide6.QtGui import QKeySequence, QShortcut
 
 from data_manager import DataManager, get_data_manager
@@ -10,8 +11,12 @@ from topbar_widget import TopBarWidget
 from pages_tabbar import PagesTabBar
 from sound_grid import SoundGrid
 from dialogs import AddSoundDialog, AddCollectionDialog, SettingsDialog, EditCollectionDialog, EditPageDialog, \
-    DeletePageDialog, DeleteCollectionDialog
+    DeletePageDialog, DeleteCollectionDialog, EditSoundDialog, DeleteSoundDialog
+import keyboard
 
+
+class HotkeyEmitter(QObject):
+    pressed = Signal(dict)
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -31,8 +36,13 @@ class MainWindow(QMainWindow):
         self.active_collection_id = None
         self.active_page_id = None
 
-        self._setup_ui()
+        self.hotkey_emitter = HotkeyEmitter()
+        self.hotkey_emitter.pressed.connect(self._on_sound_card_clicked)
+
+        # Hotkeys beim Start laden
         self._setup_keyboard_shortcuts()
+
+        self._setup_ui()
         self._load_initial_data()
 
     def _setup_ui(self):
@@ -110,6 +120,8 @@ class MainWindow(QMainWindow):
         self.sound_grid = SoundGrid()
         self.sound_grid.sound_clicked.connect(self._on_sound_card_clicked)
         self.sound_grid.add_sound_clicked.connect(self._open_add_sound_dialog)
+        self.sound_grid.sound_edit_requested.connect(self._on_edit_sound)
+        self.sound_grid.sound_delete_requested.connect(self._on_delete_sound)
         right_panel_layout.addWidget(self.sound_grid, stretch=1)
 
         main_area_layout.addWidget(right_panel, stretch=1)
@@ -167,9 +179,31 @@ class MainWindow(QMainWindow):
         return header
 
     def _setup_keyboard_shortcuts(self):
-        # Escape stoppt alle Sounds
-        escape_shortcut = QShortcut(QKeySequence(Qt.Key.Key_Escape), self)
-        escape_shortcut.activated.connect(self._stop_all_sounds)
+
+        try:
+            keyboard.unhook_all()
+        except Exception:
+            pass
+
+        keyboard.add_hotkey('esc', self._stop_all_sounds)
+
+        collections = self.data_manager.get_collections()
+        for col in collections:
+            for page in col.get("pages", []):
+                for sound in page.get("sounds", []):
+                    hotkey_str = sound.get("hotkey", "").strip()
+
+                    if hotkey_str:
+                        normalized_key = hotkey_str.lower().replace(" ", "")
+
+                        try:
+                            keyboard.add_hotkey(
+                                normalized_key,
+                                lambda s=sound: self.hotkey_emitter.pressed.emit(s),
+                                suppress=False
+                            )
+                        except Exception as e:
+                            print(f"Fehler bei Hotkey {normalized_key}: {e}")
 
     def _load_initial_data(self):
         """Laedt alle Collections und zeigt die erste an"""
@@ -194,6 +228,8 @@ class MainWindow(QMainWindow):
             first_collection = collections[0]
             self.active_collection_id = first_collection["id"]
             self._show_collection(first_collection)
+
+        self._setup_keyboard_shortcuts()
 
     def _show_collection(self, collection):
         """Zeigt eine Collection mit ihren Pages an"""
@@ -240,6 +276,8 @@ class MainWindow(QMainWindow):
                 self.collection_title_label.setText("No Collection")
                 self.collection_info_label.setText("0 sounds")
 
+        self._setup_keyboard_shortcuts()
+
     def _on_edit_collection(self, collection_id):
         collection = self.data_manager.get_collection(collection_id)
         if not collection:
@@ -269,6 +307,44 @@ class MainWindow(QMainWindow):
         collection = self.data_manager.get_collection(collection_id)
         if collection:
             self._show_collection(collection)
+
+    def _on_edit_sound(self, sound_data):
+        # Wir übergeben sound_data einfach an den Konstruktor
+        dialog = EditSoundDialog(sound_data, self)
+
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            new_data = dialog.get_sound_data()
+
+            # Pfad-Check für Duration
+            if new_data["file_path"] != sound_data["file_path"]:
+                new_data["duration"] = get_audio_duration(new_data["file_path"])
+            else:
+                new_data["duration"] = sound_data.get("duration", "0:00")
+
+            # Update im Manager
+            self.data_manager.update_sound(
+                self.active_collection_id,
+                self.active_page_id,
+                sound_data["id"],
+                new_data
+            )
+
+            self._on_page_selected(self.active_page_id)
+            self._setup_keyboard_shortcuts()
+
+    def _on_delete_sound(self, sound_data):
+        dialog = DeleteSoundDialog(sound_data.get("name", "Unbekannter Sound"), self)
+
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            self.data_manager.delete_sound(
+                self.active_collection_id,
+                self.active_page_id,
+                sound_data["id"]
+            )
+
+            self._on_page_selected(self.active_page_id)
+
+            self._setup_keyboard_shortcuts()
 
     def _on_page_selected(self, page_id):
         collection = self.data_manager.get_collection(self.active_collection_id)
@@ -369,6 +445,7 @@ class MainWindow(QMainWindow):
             self._show_collection(
                 self.data_manager.get_collection(self.active_collection_id)
             )
+        self._setup_keyboard_shortcuts()
 
     def _on_rows_changed(self, rows):
         self.sound_grid.set_rows(rows)
@@ -381,7 +458,6 @@ class MainWindow(QMainWindow):
         if dialog.exec() == AddSoundDialog.DialogCode.Accepted:
             sound_data = dialog.get_sound_data()
 
-            # Audio-Laenge berechnen wenn eine Datei gewaehlt wurde
             if sound_data["file_path"]:
                 sound_data["duration"] = get_audio_duration(sound_data["file_path"])
 
@@ -392,6 +468,8 @@ class MainWindow(QMainWindow):
                     sound_data
                 )
                 self._on_page_selected(self.active_page_id)
+
+        self._setup_keyboard_shortcuts()
 
     def _open_add_collection_dialog(self):
         dialog = AddCollectionDialog(self)

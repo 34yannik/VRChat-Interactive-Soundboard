@@ -44,7 +44,7 @@ class OscClient:
 
             data_manager = DataManager()
             settings = data_manager.get_settings()
-            font = settings.get("font", "Normal")
+            font = settings.get("font")
 
             if font == "UwU":
                 if "?" not in message and "!" not in message:

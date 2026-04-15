@@ -1,5 +1,5 @@
 from PySide6.QtWidgets import (QWidget, QScrollArea, QGridLayout, QVBoxLayout,
-                               QFrame, QLabel)
+                               QFrame, QLabel, QMenu)
 from PySide6.QtCore import Qt, Signal
 
 from sound_card import SoundCard
@@ -61,6 +61,8 @@ class AddSoundCard(QFrame):
 
 class SoundGrid(QWidget):
     sound_clicked = Signal(dict)
+    sound_edit_requested = Signal(dict)
+    sound_delete_requested = Signal(dict)
     add_sound_clicked = Signal()
 
     def __init__(self, parent=None):
@@ -108,6 +110,10 @@ class SoundGrid(QWidget):
         for sound_data in sounds_list:
             card = SoundCard(sound_data, size=card_size)
             card.clicked.connect(self.sound_clicked.emit)
+
+            card.right_clicked.connect(self.sound_right_clicked_action)
+            self.sound_cards.append(card)
+
             card.right_clicked.connect(self._on_right_click)
             self.sound_cards.append(card)
             self.grid_layout.addWidget(card, current_row, current_column)
@@ -120,6 +126,31 @@ class SoundGrid(QWidget):
         add_card = AddSoundCard(size=card_size)
         add_card.clicked.connect(self.add_sound_clicked.emit)
         self.grid_layout.addWidget(add_card, current_row, current_column)
+
+    def sound_right_clicked_action(self, sound_data):
+        """Erzeugt ein Kontextmenü an der Mausposition"""
+        menu = QMenu(self)
+        menu.setStyleSheet("""
+            QMenu {
+                background-color: #16162a;
+                color: white;
+                border: 1px solid #2a2a45;
+            }
+            QMenu::item:selected {
+                background-color: #4a6cf7;
+            }
+        """)
+
+        edit_action = menu.addAction("Edit Sound")
+        delete_action = menu.addAction("Delete Sound")
+
+        # Menü an der aktuellen Mausposition anzeigen
+        action = menu.exec(self.cursor().pos())
+
+        if action == edit_action:
+            self.sound_edit_requested.emit(sound_data)
+        elif action == delete_action:
+            self.sound_delete_requested.emit(sound_data)
 
     def _clear_grid(self):
         while self.grid_layout.count():

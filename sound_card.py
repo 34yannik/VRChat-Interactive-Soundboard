@@ -1,6 +1,9 @@
 from PySide6.QtWidgets import QFrame, QVBoxLayout, QHBoxLayout, QLabel
 from PySide6.QtCore import Qt, Signal
 from waveform_widget import WaveformWidget
+from data_manager import get_data_manager
+import fancify_text
+import uwuify
 
 CARD_BACKGROUND = "#16162a"
 CARD_BACKGROUND_HOVER = "#1c1c34"
@@ -38,18 +41,9 @@ class SoundCard(QFrame):
         layout.setContentsMargins(pad, self._scaled(10), pad, pad)
         layout.setSpacing(self._scaled(4))
 
-        # Obere Zeile: Icon + Hotkey
         top_row = QHBoxLayout()
         top_row.setContentsMargins(0, 0, 0, 0)
         top_row.setSpacing(0)
-
-        icon_text = self.sound_data.get("icon", "🔊")
-        self.icon_label = QLabel(icon_text)
-        self.icon_label.setStyleSheet(
-            f"font-size: {self._scaled(16)}px; background: transparent; color: white;"
-        )
-        top_row.addWidget(self.icon_label)
-        top_row.addStretch()
 
         hotkey_text = self.sound_data.get("hotkey", "")
         if hotkey_text:
@@ -66,7 +60,6 @@ class SoundCard(QFrame):
         self.waveform = WaveformWidget()
         layout.addWidget(self.waveform, stretch=1)
 
-        # Name
         sound_name = self.sound_data.get("name", "Unbekannt")
         self.name_label = QLabel(sound_name)
         self.name_label.setStyleSheet(
@@ -74,15 +67,37 @@ class SoundCard(QFrame):
             f"font-weight: bold; background: transparent;"
         )
         self.name_label.setWordWrap(True)
+        layout.addWidget(self.name_label)
 
-        # Dauer
+        sound_osc = self.sound_data.get("osc_message")
+        if sound_osc:
+
+            font = get_data_manager().get_settings().get("font")
+
+            if font == "UwU":
+                if "?" not in sound_osc and "!" not in sound_osc:
+                    sound_osc += "."
+                sound_osc = uwuify.uwu(sound_osc, flags=uwuify.SMILEY | uwuify.STUTTER)
+
+            elif font:
+                try:
+                    sound_osc = fancify_text.fancify(sound_osc, font)
+                except Exception as e:
+                    print(f"[FONT ERROR] {e} → fallback used")
+
+            self.osc_label = QLabel("OSC - " + sound_osc)
+            self.osc_label.setStyleSheet(
+                f"color: #4a6cf7; font-size: {max(8, self._scaled(11))}px; "
+                f"font-style: italic; background: transparent;"
+            )
+            self.osc_label.setWordWrap(True)
+            layout.addWidget(self.osc_label)
+
         duration_text = self.sound_data.get("duration", "0:00")
         self.duration_label = QLabel(duration_text)
         self.duration_label.setStyleSheet(
             f"color: #666688; font-size: {max(8, self._scaled(11))}px; background: transparent;"
         )
-
-        layout.addWidget(self.name_label)
         layout.addWidget(self.duration_label)
 
     def _apply_idle_style(self):

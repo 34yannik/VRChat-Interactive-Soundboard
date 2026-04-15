@@ -235,12 +235,6 @@ class DataManager:
 
                 existing_ids = [s["id"] for s in page["sounds"]]
                 new_id = max(existing_ids) + 1 if existing_ids else 1
-
-                max_slots = self.get_columns() * self.get_rows()
-                if len(page["sounds"]) >= max_slots:
-                    print("[WARN] Max slots erreicht!")
-                    return None
-
                 sound_data["id"] = new_id
                 page["sounds"].append(sound_data)
 
@@ -248,6 +242,39 @@ class DataManager:
                 return sound_data
 
         return None
+
+    def update_sound(self, collection_id, page_id, sound_id, new_data):
+        """Findet einen Sound anhand seiner ID und überschreibt die Daten"""
+        collection = self.get_collection(collection_id)
+        if not collection:
+            return False
+
+        for page in collection.get("pages", []):
+            if page["id"] == page_id:
+                for i, sound in enumerate(page.get("sounds", [])):
+                    if sound.get("id") == sound_id:
+                        new_data["id"] = sound_id
+                        page["sounds"][i] = new_data
+
+                        self.save_data()
+                        return True
+        return False
+
+    def delete_sound(self, collection_id, page_id, sound_id):
+        """Entfernt einen Sound aus der Liste"""
+        collection = self.get_collection(collection_id)
+        if not collection:
+            return False
+
+        for page in collection.get("pages", []):
+            if page["id"] == page_id:
+                original_count = len(page["sounds"])
+                page["sounds"] = [s for s in page["sounds"] if s.get("id") != sound_id]
+
+                if len(page["sounds"]) < original_count:
+                    self.save_data()
+                    return True
+        return False
 
     def remove_sound(self, collection_id, page_id, sound_id):
         collection = self.get_collection(collection_id)
