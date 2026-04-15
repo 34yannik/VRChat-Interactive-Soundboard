@@ -37,7 +37,7 @@ class MainWindow(QMainWindow):
         self.active_page_id = None
 
         self.hotkey_emitter = HotkeyEmitter()
-        self.hotkey_emitter.pressed.connect(self._on_sound_card_clicked)
+        self.hotkey_emitter.pressed.connect(self._on_hotkey_triggered)
 
         # Hotkeys beim Start laden
         self._setup_keyboard_shortcuts()
@@ -178,32 +178,44 @@ class MainWindow(QMainWindow):
 
         return header
 
-    def _setup_keyboard_shortcuts(self):
+    def _on_hotkey_triggered(self, data):
+        """Zentraler Einstiegspunkt für alle Hotkeys (VR & Keyboard)"""
+        if data.get("action") == "stop_all":
+            self._stop_all_sounds()
+            return
 
+        # Hier wird der Sound und ggf. OSC ausgelöst
+        self._on_sound_card_clicked(data)
+
+    def _setup_keyboard_shortcuts(self):
+        """Globaler Hook für maximale Kompatibilität mit OVR/VR-Controllern"""
         try:
             keyboard.unhook_all()
         except Exception:
             pass
 
-        keyboard.add_hotkey('esc', self._stop_all_sounds)
+        def on_key_event(event):
+            # Wir reagieren nur auf das Drücken der Taste
+            if event.event_type == keyboard.KEY_DOWN:
+                key_name = event.name.lower()
 
-        collections = self.data_manager.get_collections()
-        for col in collections:
-            for page in col.get("pages", []):
-                for sound in page.get("sounds", []):
-                    hotkey_str = sound.get("hotkey", "").strip()
+                # 1. Stop-Key Check (ESC)
+                if key_name == 'esc':
+                    self.hotkey_emitter.pressed.emit({"action": "stop_all"})
+                    return
 
-                    if hotkey_str:
-                        normalized_key = hotkey_str.lower().replace(" ", "")
+                # 2. Sound-Hotkeys Check
+                collections = self.data_manager.get_collections()
+                for col in collections:
+                    for page in col.get("pages", []):
+                        for sound in page.get("sounds", []):
+                            hotkey = sound.get("hotkey", "").lower().replace(" ", "")
 
-                        try:
-                            keyboard.add_hotkey(
-                                normalized_key,
-                                lambda s=sound: self.hotkey_emitter.pressed.emit(s),
-                                suppress=False
-                            )
-                        except Exception as e:
-                            print(f"Fehler bei Hotkey {normalized_key}: {e}")
+                            if key_name == hotkey:
+                                self.hotkey_emitter.pressed.emit(sound)
+                                return
+
+        keyboard.hook(on_key_event)
 
     def _load_initial_data(self):
         """Laedt alle Collections und zeigt die erste an"""
