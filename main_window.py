@@ -3,6 +3,7 @@ from PySide6.QtWidgets import QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QL
 from PySide6.QtCore import Qt, Signal, QObject
 from PySide6.QtGui import QKeySequence, QShortcut
 
+import sidebar_widget
 from data_manager import DataManager, get_data_manager
 from audio_player import AudioPlayer, get_audio_duration
 from osc_client import OscClient
@@ -195,7 +196,6 @@ class MainWindow(QMainWindow):
             pass
 
         def on_key_event(event):
-            # Wir reagieren nur auf das Drücken der Taste
             if event.event_type == keyboard.KEY_DOWN:
                 key_name = event.name.lower()
 
@@ -374,6 +374,8 @@ class MainWindow(QMainWindow):
         osc_message = sound_data.get("osc_message", "")
         if osc_message:
             self.osc_client.send_chatbox_message(osc_message)
+
+        self.sidebar.sound_settings.load_sound(sound_data)
 
     def _stop_all_sounds(self):
         self.audio_player.stop_all()

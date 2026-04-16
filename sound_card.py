@@ -100,6 +100,8 @@ class SoundCard(QFrame):
         )
         layout.addWidget(self.duration_label)
 
+
+
     def _apply_idle_style(self):
         radius = self._scaled(10)
         self.setStyleSheet(f"""
