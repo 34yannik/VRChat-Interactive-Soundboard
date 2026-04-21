@@ -8,12 +8,11 @@ try:
         pygame.mixer.init(frequency=44100, size=-16, channels=2, buffer=512)
     PYGAME_AVAILABLE = True
 except Exception as e:
-    print(f"Metadaten-Engine (pygame) konnte nicht gestartet werden: {e}")
+    print(f"pygame init failed: {e}")
     PYGAME_AVAILABLE = False
 
 
 def get_audio_duration(file_path):
-    """Berechnet die Länge eines Sounds in M:SS"""
     try:
         if not PYGAME_AVAILABLE:
             return "0:00"
@@ -25,7 +24,6 @@ def get_audio_duration(file_path):
 
 
 def get_audio_outputs():
-    """Gibt alle verfügbaren Ausgabegeräte als Liste von Strings zurück"""
     devices = QMediaDevices.audioOutputs()
     return [d.description() for d in devices] or ["Default Output"]
 
@@ -39,14 +37,12 @@ class AudioPlayer:
         self.player.setAudioOutput(self.audio_output)
 
         settings = self.data_manager.get_settings()
+        self.master_volume = settings.get("volume", 75)
 
-        initial_vol = settings.get("volume", 75) / 100.0
-        self.audio_output.setVolume(initial_vol)
-
+        self.audio_output.setVolume(self.master_volume / 100.0)
         self._apply_output_device()
 
     def _apply_output_device(self):
-        """Sucht das gespeicherte Gerät und weist es dem Output zu"""
         settings = self.data_manager.get_settings()
         saved_name = settings.get("output_device", "")
         devices = QMediaDevices.audioOutputs()
@@ -66,8 +62,11 @@ class AudioPlayer:
             if self.audio_output.device() != selected_device:
                 self.audio_output.setDevice(selected_device)
 
-    def play_sound(self, file_path):
-        """Spielt einen Sound über das gewählte Gerät ab"""
+    def _combined_volume(self, sound_volume):
+        # master * sound volume, both 0-100, result normalized to 0.0-1.0
+        return (self.master_volume / 100.0) * (sound_volume / 100.0)
+
+    def play_sound(self, file_path, sound_volume=100):
         settings = self.data_manager.get_settings()
 
         if not settings.get("enable_output", False):
@@ -76,24 +75,20 @@ class AudioPlayer:
         if self.player.playbackState() != QMediaPlayer.PlaybackState.StoppedState:
             self.player.stop()
 
+        self.audio_output.setVolume(self._combined_volume(sound_volume))
+
         self.player.setSource(QUrl.fromLocalFile(file_path))
         self.player.play()
 
     def stop_all(self):
-        """Stoppt die aktuelle Wiedergabe sofort"""
         self.player.stop()
 
     def set_volume(self, volume_percent):
-        """Passt die Lautstärke während der Laufzeit an"""
+        self.master_volume = volume_percent
         self.audio_output.setVolume(volume_percent / 100.0)
 
     def set_output_device(self, device_name):
-        """
-        Ändert das Ausgabegerät global.
-        Sollte nur aufgerufen werden, wenn der User die Settings ändert.
-        """
         settings = self.data_manager.get_settings()
         settings["output_device"] = device_name
         self.data_manager.update_settings("output_device", device_name)
-
         self._apply_output_device()

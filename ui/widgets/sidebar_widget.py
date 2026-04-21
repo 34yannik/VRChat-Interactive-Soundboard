@@ -1,17 +1,14 @@
-from PySide6.QtWidgets import (QVBoxLayout,
-                               QPushButton, QScrollArea, QFrame,
-                               QSizePolicy)
+from PySide6.QtWidgets import QVBoxLayout, QPushButton, QScrollArea, QFrame
 import os
-
 
 from PySide6.QtWidgets import QWidget, QHBoxLayout, QLabel, QMenu
 from PySide6.QtCore import Qt, Signal
-from data_manager import get_data_manager
+from core.data_manager import get_data_manager
 import fancify_text
 import uwuify
 
+
 class CollectionItem(QWidget):
-    """Ein einzelner Eintrag in der Collections-Liste"""
 
     clicked = Signal(int)
     collection_edit_requested = Signal(int)
@@ -42,7 +39,6 @@ class CollectionItem(QWidget):
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setFixedHeight(40)
 
-        # 👉 Right-click Menu aktivieren
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(self._open_context_menu)
 
@@ -54,16 +50,12 @@ class CollectionItem(QWidget):
         layout.setContentsMargins(10, 0, 10, 0)
         layout.setSpacing(10)
 
-        # Emoji Icon
         self.icon_label = QLabel(self.collection_data.get("icon", "🎵"))
         self.icon_label.setStyleSheet("font-size: 15px; background: transparent;")
         self.icon_label.setFixedWidth(22)
 
-        # Name
         self.name_label = QLabel(self.collection_data["name"])
-        self.name_label.setStyleSheet(
-            "font-size: 13px; background: transparent; color: #aaaacc;"
-        )
+        self.name_label.setStyleSheet("font-size: 13px; background: transparent; color: #aaaacc;")
 
         layout.addWidget(self.icon_label)
         layout.addWidget(self.name_label)
@@ -89,9 +81,6 @@ class CollectionItem(QWidget):
         if event.button() == Qt.MouseButton.LeftButton:
             self.clicked.emit(self.collection_data["id"])
 
-    # -----------------------------
-    # CONTEXT MENU (RIGHT CLICK)
-    # -----------------------------
     def _open_context_menu(self, pos):
         menu = QMenu(self)
 
@@ -109,7 +98,6 @@ class CollectionItem(QWidget):
 
 
 class SidebarWidget(QWidget):
-    """Linke Seitenleiste – Collections oben, Sound-Einstellungen unten"""
 
     collection_selected = Signal(int)
     add_collection_clicked = Signal()
@@ -130,8 +118,6 @@ class SidebarWidget(QWidget):
         main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.setSpacing(0)
 
-        # ── OBERER BEREICH: Collections ──────────────────────────
-        # Header "COLLECTIONS" + Plus-Button
         header_widget = QWidget()
         header_widget.setFixedHeight(50)
         header_widget.setStyleSheet("background: transparent;")
@@ -161,7 +147,6 @@ class SidebarWidget(QWidget):
         header_layout.addWidget(add_collection_btn)
         main_layout.addWidget(header_widget)
 
-        # Scrollbarer Collections-Bereich (stretch=1 → nimmt den freien Platz)
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
         scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
@@ -180,51 +165,32 @@ class SidebarWidget(QWidget):
         self.collections_layout.addStretch()
 
         scroll_area.setWidget(self.collections_container)
-        main_layout.addWidget(scroll_area, stretch=1)   # ← wächst mit
+        main_layout.addWidget(scroll_area, stretch=1)
 
-        # ── TRENNLINIE ────────────────────────────────────────────
         separator = QFrame()
         separator.setFrameShape(QFrame.Shape.HLine)
-        separator.setStyleSheet(
-            "background-color: #1a1a30; max-height: 1px; border: none;"
-        )
+        separator.setStyleSheet("background-color: #1a1a30; max-height: 1px; border: none;")
         separator.setFixedHeight(1)
         main_layout.addWidget(separator)
 
-        # ── UNTERER BEREICH: Sound-Einstellungen (feste Höhe) ─────
         self.sound_settings = SoundSettingsPanel()
 
         self.sound_scroll = QScrollArea()
         self.sound_scroll.setWidgetResizable(True)
         self.sound_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.sound_scroll.setStyleSheet("""
-            QScrollArea {
-                border: none;
-                background: transparent;
-            }
-            QScrollBar:vertical {
-                background: transparent;
-                width: 4px;
-            }
-            QScrollBar::handle:vertical {
-                background: #2a2a45;
-                border-radius: 2px;
-            }
+            QScrollArea { border: none; background: transparent; }
+            QScrollBar:vertical { background: transparent; width: 4px; }
+            QScrollBar::handle:vertical { background: #2a2a45; border-radius: 2px; }
         """)
 
-        # wichtig: Panel reinsetzen
         self.sound_scroll.setWidget(self.sound_settings)
-
-        # Höhe begrenzen (HIER passiert dein "cap")
-        self.sound_scroll.setMaximumHeight(260)  # <- dein Limit
+        self.sound_scroll.setMaximumHeight(280)
         self.sound_scroll.setMinimumHeight(120)
 
         main_layout.addWidget(self.sound_scroll)
 
-    # ── Public API ────────────────────────────────────────────────
-
     def load_collections(self, collections_list, active_id=None):
-        """Lädt alle Collections in die Sidebar."""
         self.collection_items = {}
         while self.collections_layout.count():
             item = self.collections_layout.takeAt(0)
@@ -233,45 +199,6 @@ class SidebarWidget(QWidget):
 
         for collection_data in collections_list:
             item = CollectionItem(collection_data)
-            item.clicked.connect(self._on_item_clicked)
-            item.collection_edit_requested.connect(
-                self.collection_edit_requested.emit
-            )
-            item.collection_delete_requested.connect(
-                self.collection_delete_requested.emit
-            )
-            self.collection_items[collection_data["id"]] = item
-            self.collections_layout.addWidget(item)
-
-        self.collections_layout.addStretch()
-
-        if active_id and active_id in self.collection_items:
-            self.collection_items[active_id].set_active(True)
-        elif collections_list:
-            self.collection_items[collections_list[0]["id"]].set_active(True)
-
-    def load_sound_settings(self, sound_data: dict | None):
-        """Befüllt das Sound-Panel mit den Daten des ausgewählten Sounds."""
-        self.sound_settings.load_sound(sound_data)
-
-    def _on_item_clicked(self, collection_id):
-        for item in self.collection_items.values():
-            item.set_active(False)
-        if collection_id in self.collection_items:
-            self.collection_items[collection_id].set_active(True)
-        self.collection_selected.emit(collection_id)
-    def load_collections(self, collections_list, active_id=None):
-        """Laedt alle Collections in die Sidebar"""
-        # Bestehende Items entfernen
-        self.collection_items = {}
-        while self.collections_layout.count():
-            item = self.collections_layout.takeAt(0)
-            if item.widget():
-                item.widget().deleteLater()
-
-        for collection_data in collections_list:
-            item = CollectionItem(collection_data)
-
             item.clicked.connect(self._on_item_clicked)
             item.collection_edit_requested.connect(self.collection_edit_requested.emit)
             item.collection_delete_requested.connect(self.collection_delete_requested.emit)
@@ -280,23 +207,24 @@ class SidebarWidget(QWidget):
 
         self.collections_layout.addStretch()
 
-        # Aktive Collection setzen
         if active_id and active_id in self.collection_items:
             self.collection_items[active_id].set_active(True)
         elif collections_list:
             first_id = collections_list[0]["id"]
             self.collection_items[first_id].set_active(True)
 
+    def load_sound_settings(self, sound_data: dict | None):
+        self.sound_settings.load_sound(sound_data)
+
     def _on_item_clicked(self, collection_id):
-        # Alle deaktivieren, nur geklickte aktivieren
         for item in self.collection_items.values():
             item.set_active(False)
         if collection_id in self.collection_items:
             self.collection_items[collection_id].set_active(True)
         self.collection_selected.emit(collection_id)
 
+
 class SoundSettingsPanel(QWidget):
-    """Unterer Bereich der Sidebar – zeigt Infos des aktuell ausgewählten Sounds"""
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -308,7 +236,6 @@ class SoundSettingsPanel(QWidget):
         layout.setContentsMargins(12, 12, 12, 12)
         layout.setSpacing(8)
 
-        # Header
         header = QLabel("SOUND DETAILS")
         header.setStyleSheet(
             "color: #555577; font-size: 10px; font-weight: bold; "
@@ -316,7 +243,6 @@ class SoundSettingsPanel(QWidget):
         )
         layout.addWidget(header)
 
-        # Info-Box (Name + Duration)
         info_box = QWidget()
         info_box.setStyleSheet("background: #111128; border-radius: 6px;")
         info_layout = QVBoxLayout(info_box)
@@ -324,36 +250,28 @@ class SoundSettingsPanel(QWidget):
         info_layout.setSpacing(4)
 
         self.sound_name_label = QLabel("—")
-        self.sound_name_label.setStyleSheet(
-            "font-size: 13px; color: #aaaacc; background: transparent;"
-        )
+        self.sound_name_label.setStyleSheet("font-size: 13px; color: #aaaacc; background: transparent;")
         self.sound_name_label.setWordWrap(True)
 
         self.duration_label = QLabel("")
-        self.duration_label.setStyleSheet(
-            "font-size: 11px; color: #555577; background: transparent;"
-        )
+        self.duration_label.setStyleSheet("font-size: 11px; color: #555577; background: transparent;")
 
         info_layout.addWidget(self.sound_name_label)
         info_layout.addWidget(self.duration_label)
         layout.addWidget(info_box)
 
-        # Hotkey
         self.hotkey_row = self._make_info_row("Hotkey", "hotkey_value")
-
-        # OSC Message
         self.osc_row = self._make_info_row("OSC Chatbox", "osc_value")
-
-        # File path (nur Dateiname, gekürzt)
+        self.volume_row = self._make_info_row("Volume", "volume_value")
         self.file_row = self._make_info_row("File", "file_value")
 
         layout.addWidget(self.hotkey_row)
         layout.addWidget(self.osc_row)
+        layout.addWidget(self.volume_row)
         layout.addWidget(self.file_row)
         layout.addStretch()
 
     def _make_info_row(self, label_text: str, value_attr: str) -> QWidget:
-        """Erstellt eine zweispaltige Label-Zeile (Key: Value)"""
         row = QWidget()
         row.setStyleSheet("background: transparent;")
         row_layout = QHBoxLayout(row)
@@ -362,14 +280,10 @@ class SoundSettingsPanel(QWidget):
 
         key_lbl = QLabel(label_text)
         key_lbl.setFixedWidth(68)
-        key_lbl.setStyleSheet(
-            "font-size: 11px; color: #555577; background: transparent;"
-        )
+        key_lbl.setStyleSheet("font-size: 11px; color: #555577; background: transparent;")
 
         val_lbl = QLabel("—")
-        val_lbl.setStyleSheet(
-            "font-size: 11px; color: #8888aa; background: transparent;"
-        )
+        val_lbl.setStyleSheet("font-size: 11px; color: #8888aa; background: transparent;")
         val_lbl.setWordWrap(True)
 
         row_layout.addWidget(key_lbl)
@@ -379,12 +293,12 @@ class SoundSettingsPanel(QWidget):
         return row
 
     def load_sound(self, sound_data: dict | None):
-        """Befüllt das Panel mit den Daten des ausgewählten Sounds."""
         if not sound_data:
             self.sound_name_label.setText("—")
             self.duration_label.setText("")
             self.hotkey_value.setText("—")
             self.osc_value.setText("—")
+            self.volume_value.setText("—")
             self.file_value.setText("—")
             return
 
@@ -399,9 +313,12 @@ class SoundSettingsPanel(QWidget):
         osc = sound_data.get("osc_message", "")
         self.osc_value.setText(self._format_text(osc if osc else "—"))
 
+        # show per-sound volume as percentage
+        vol = sound_data.get("volume", 100)
+        self.volume_value.setText(f"{vol}%")
+
         file_path = sound_data.get("file_path", "")
         file_name = os.path.basename(file_path) if file_path else "—"
-        # Kürzen wenn zu lang für die schmale Sidebar
         if len(file_name) > 22:
             name, ext = os.path.splitext(file_name)
             file_name = name[:18] + "…" + ext
@@ -419,7 +336,7 @@ class SoundSettingsPanel(QWidget):
             try:
                 return fancify_text.fancify(text, font)
             except Exception as e:
-                print(f"[FONT ERROR] {e}")
+                print(f"font error: {e}")
                 return text
 
         return text

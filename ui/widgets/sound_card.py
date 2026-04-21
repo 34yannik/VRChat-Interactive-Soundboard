@@ -1,7 +1,7 @@
 from PySide6.QtWidgets import QFrame, QVBoxLayout, QHBoxLayout, QLabel
 from PySide6.QtCore import Qt, Signal
 from waveform_widget import WaveformWidget
-from data_manager import get_data_manager
+from core.data_manager import get_data_manager
 import fancify_text
 import uwuify
 

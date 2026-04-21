@@ -4,8 +4,6 @@ import copy
 import fancify_text
 from PySide6.QtMultimedia import QMediaDevices
 
-# ---------------- APPDATA PATH ----------------
-
 APPDATA_DIR = os.path.join(
     os.getenv("APPDATA"),
     "VRCInteractiveSoundboard"
@@ -17,8 +15,6 @@ SAVE_FILE = os.path.join(
     APPDATA_DIR,
     "soundboard-config.json"
 )
-
-# ---------------- DEFAULT DATA ----------------
 
 DEFAULT_DATA = {
     "collections": [
@@ -38,8 +34,6 @@ DEFAULT_DATA = {
         "osc_host": "127.0.0.1",
         "osc_port": 9000,
         "font": "sansSerif",
-
-        # AUDIO SETTINGS
         "enable_output": False,
         "output_device": ""
     }
@@ -60,7 +54,6 @@ class DataManager:
     def __init__(self):
         self.data = self._load_data()
 
-    # ---------------- LOAD ----------------
     def _load_data(self):
         if os.path.exists(SAVE_FILE):
             try:
@@ -70,39 +63,38 @@ class DataManager:
                 if "settings" not in data:
                     data["settings"] = {}
 
-                # Defaults
                 data["settings"].setdefault("volume", 75)
                 data["settings"].setdefault("columns", 4)
                 data["settings"].setdefault("rows", 3)
                 data["settings"].setdefault("osc_host", "127.0.0.1")
                 data["settings"].setdefault("osc_port", 9000)
                 data["settings"].setdefault("font", "sansSerif")
-
                 data["settings"].setdefault("enable_output", False)
                 data["settings"].setdefault("output_device", "")
 
-                print("[LOAD SETTINGS]", data.get("settings"))
+                # migrate existing sounds that have no per-sound volume yet
+                for col in data.get("collections", []):
+                    for page in col.get("pages", []):
+                        for sound in page.get("sounds", []):
+                            sound.setdefault("volume", 100)
 
+                print("[LOAD SETTINGS]", data.get("settings"))
                 return data
 
             except Exception as e:
-                print(f"Fehler beim Laden der Daten: {e}")
+                print(f"load error: {e}")
 
         return copy.deepcopy(DEFAULT_DATA)
 
-    # ---------------- SAVE ----------------
     def save_data(self):
         try:
             with open(SAVE_FILE, "w", encoding="utf-8") as f:
                 json.dump(self.data, f, indent=2, ensure_ascii=False)
-
                 print("[SAVE PATH]", SAVE_FILE)
                 print("[SAVE SNAPSHOT]", self.data["settings"])
-
         except Exception as e:
-            print(f"Fehler beim Speichern: {e}")
+            print(f"save error: {e}")
 
-    # ---------------- SETTINGS ----------------
     def get_settings(self):
         return self.data["settings"]
 
@@ -114,7 +106,6 @@ class DataManager:
         self.data["settings"].update(updates)
         self.save_data()
 
-    # ---------------- AUDIO DEVICE LIST (FALLBACK SAFE) ----------------
     def get_audio_outputs(self):
         devices = QMediaDevices.audioOutputs()
         names = [d.description() for d in devices]
@@ -123,31 +114,27 @@ class DataManager:
         saved = self.data["settings"].get("output_device", "")
 
         if saved and saved not in names:
-            print(f"[FALLBACK OUTPUT] '{saved}' not found → using default")
+            print(f"[FALLBACK OUTPUT] '{saved}' not found")
             self.data["settings"]["output_device"] = fallback
 
         return names or [fallback]
 
-    # ---------------- FONT ----------------
     def get_all_fonts(self):
         fonts = [
             name for name in dir(fancify_text)
             if callable(getattr(fancify_text, name)) and not name.startswith("_")
         ]
-
         fonts = sorted(set(fonts))
         fonts.insert(0, "Normal")
         fonts.append("UwU")
         return fonts
 
-    # ---------------- HELPERS ----------------
     def get_output_device(self):
         return self.data["settings"].get("output_device", "")
 
     def is_output_enabled(self):
         return self.data["settings"].get("enable_output", False)
 
-    # ---------------- COLLECTIONS / PAGES / SOUNDS (UNCHANGED) ----------------
     def get_collections(self):
         return self.data["collections"]
 
@@ -194,12 +181,7 @@ class DataManager:
         existing_ids = [p["id"] for p in collection["pages"]]
         new_id = max(existing_ids) + 1 if existing_ids else 1
 
-        new_page = {
-            "id": new_id,
-            "name": page_name,
-            "sounds": []
-        }
-
+        new_page = {"id": new_id, "name": page_name, "sounds": []}
         collection["pages"].append(new_page)
         self.save_data()
         return new_page
@@ -232,19 +214,17 @@ class DataManager:
 
         for page in collection["pages"]:
             if page["id"] == page_id:
-
                 existing_ids = [s["id"] for s in page["sounds"]]
                 new_id = max(existing_ids) + 1 if existing_ids else 1
                 sound_data["id"] = new_id
+                sound_data.setdefault("volume", 100)
                 page["sounds"].append(sound_data)
-
                 self.save_data()
                 return sound_data
 
         return None
 
     def update_sound(self, collection_id, page_id, sound_id, new_data):
-        """Findet einen Sound anhand seiner ID und überschreibt die Daten"""
         collection = self.get_collection(collection_id)
         if not collection:
             return False
@@ -254,14 +234,13 @@ class DataManager:
                 for i, sound in enumerate(page.get("sounds", [])):
                     if sound.get("id") == sound_id:
                         new_data["id"] = sound_id
+                        new_data.setdefault("volume", 100)
                         page["sounds"][i] = new_data
-
                         self.save_data()
                         return True
         return False
 
     def delete_sound(self, collection_id, page_id, sound_id):
-        """Entfernt einen Sound aus der Liste"""
         collection = self.get_collection(collection_id)
         if not collection:
             return False
