@@ -8,6 +8,7 @@ from ui.widgets.sidebar_widget import SidebarWidget
 from ui.widgets.topbar_widget import TopBarWidget
 from ui.widgets.pages_tabbar import PagesTabBar
 from ui.widgets.sound_grid import SoundGrid
+from ui.widgets.notification_widget import NotificationManager, TYPE_INFO, TYPE_SUCCESS, TYPE_WARNING, TYPE_UPDATE  # noqa
 from ui.dialogs import AddSoundDialog, AddCollectionDialog, SettingsDialog, EditCollectionDialog, EditPageDialog, \
     DeletePageDialog, DeleteCollectionDialog, EditSoundDialog, DeleteSoundDialog
 import keyboard
@@ -18,8 +19,12 @@ class HotkeyEmitter(QObject):
 
 
 class MainWindow(QMainWindow):
+    # signal so background threads can safely trigger a notification
+    _notify_signal = Signal(str, str, str, str, object, object)
+
     def __init__(self):
         super().__init__()
+        self._notify_signal.connect(self._on_notify_signal)
         self.setWindowTitle("VRC Interactive Soundboard")
         self.resize(1300, 820)
         self.setMinimumSize(900, 600)
@@ -109,6 +114,32 @@ class MainWindow(QMainWindow):
 
         main_area_layout.addWidget(right_panel, stretch=1)
         root_layout.addWidget(main_area_widget, stretch=1)
+
+        # notification overlay sits above all other widgets
+        self.notifications = NotificationManager(self)
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        if hasattr(self, "notifications"):
+            self.notifications.update_geometry()
+
+    # ---- public api ---------------------------------------------------------
+
+    def notify(self, title, message="", notif_type=TYPE_INFO,
+                action_label=None, action_callback=None):
+        """thread-safe: can be called from any thread"""
+        self._notify_signal.emit(title, message, notif_type,
+                                 action_label or "", action_callback, None)
+
+    def _on_notify_signal(self, title, message, notif_type, action_label, action_callback, _):
+        """always runs on main thread via signal/slot"""
+        self.notifications.show_notification(
+            title, message, notif_type,
+            action_label or None,
+            action_callback if callable(action_callback) else None
+        )
+
+    # ---- ui -----------------------------------------------------------------
 
     def _create_collection_header(self):
         header = QWidget()
@@ -320,7 +351,6 @@ class MainWindow(QMainWindow):
     def _on_sound_card_clicked(self, sound_data):
         file_path = sound_data.get("file_path", "")
         if file_path:
-            # pass per-sound volume so audio player can combine with master
             sound_volume = sound_data.get("volume", 100)
             self.audio_player.play_sound(file_path, sound_volume)
 

@@ -6,21 +6,21 @@ import threading
 
 from PySide6.QtWidgets import QApplication
 from PySide6.QtGui import QIcon
+from PySide6.QtCore import QTimer
 
 from ui.main_window import MainWindow
+from ui.widgets.notification_widget import TYPE_UPDATE
 from updater import Updater
 from meta import __version__
 
 
-# ---------------- LOCK ----------------
+# ---- single-instance lock ---------------------------------------------------
 
 LOCK_FILE = os.path.join(
     tempfile.gettempdir(),
     "vrc_soundboard.lock"
 )
 
-
-# ---------------- FUNCTIONS ----------------
 
 def resource_path(relative_path):
     base_path = getattr(sys, "_MEIPASS", os.path.abspath("."))
@@ -33,9 +33,8 @@ def is_process_running(pid: int) -> bool:
             ["tasklist", "/FI", f"PID eq {pid}"],
             creationflags=subprocess.CREATE_NO_WINDOW
         ).decode()
-
         return str(pid) in output
-    except:
+    except Exception:
         return False
 
 
@@ -50,12 +49,12 @@ def already_running():
         if is_process_running(pid):
             return True
 
-    except:
+    except Exception:
         pass
 
     try:
         os.remove(LOCK_FILE)
-    except:
+    except Exception:
         pass
 
     return False
@@ -70,29 +69,46 @@ def remove_lock():
     try:
         if os.path.exists(LOCK_FILE):
             os.remove(LOCK_FILE)
-    except:
+    except Exception:
         pass
 
 
-# ---------------- UPDATE CHECK ----------------
+# ---- update check -----------------------------------------------------------
 
-def check_for_updates():
+def check_for_updates(window: MainWindow):
+    """runs in a background thread, posts a toast to the main thread when done"""
     try:
         updater = Updater(__version__, True)
 
         if updater.is_update_available():
-            print(f"[Updater] Update verfügbar: {updater.latest_release['version']}")
+            version_tag = updater.latest_release["version"]
+            print(f"[Updater] update available: {version_tag}")
+
+            # window.notify() is thread-safe via Qt signal
+            window.notify(
+                "Update Available",
+                f"Version {version_tag} is ready to download.",
+                TYPE_UPDATE,
+                action_label="Download",
+                action_callback=lambda: _open_release_url(updater.latest_release.get("url", ""))
+            )
 
     except Exception as e:
-        print("[Updater] Fehler:", e)
+        print("[Updater] error:", e)
 
 
-# ---------------- MAIN ----------------
+def _open_release_url(url: str):
+    if url:
+        import webbrowser
+        webbrowser.open(url)
+
+
+# ---- entry point ------------------------------------------------------------
 
 if __name__ == "__main__":
 
     if already_running():
-        print("App läuft bereits!")
+        print("already running")
         sys.exit(0)
 
     create_lock()
@@ -107,8 +123,7 @@ if __name__ == "__main__":
     window.setWindowIcon(icon)
     window.show()
 
-    # ---------------- THREADING UPDATE CHECK ----------------
-    threading.Thread(target=check_for_updates, daemon=True).start()
+    threading.Thread(target=check_for_updates, args=(window,), daemon=True).start()
 
     try:
         exit_code = app.exec()

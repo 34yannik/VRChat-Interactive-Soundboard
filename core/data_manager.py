@@ -43,7 +43,6 @@ DEFAULT_DATA = {
 
 _INSTANCE = None
 
-
 def get_data_manager():
     global _INSTANCE
     if _INSTANCE is None:

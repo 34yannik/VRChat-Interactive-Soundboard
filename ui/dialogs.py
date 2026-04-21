@@ -8,7 +8,6 @@ import fancify_text
 from core.data_manager import get_data_manager
 from core.audio_player import get_audio_outputs
 from meta import __version__, __author__
-from updater import Updater
 
 DIALOG_STYLE = """
     QDialog {
@@ -693,12 +692,7 @@ class SettingsDialog(QDialog):
         super().__init__(parent)
         self.setWindowTitle("Settings")
 
-        self.updater = Updater.get_updater()
-
-        if self.updater.is_update_available():
-            self.setFixedSize(400, 600)
-        else:
-            self.setFixedSize(400, 560)
+        self.setFixedSize(400, 560)
 
         self.current_settings = current_settings
         self._setup_ui()
@@ -801,7 +795,7 @@ class SettingsDialog(QDialog):
         import subprocess
 
         def open_folder():
-            folder = os.path.join(os.environ.get("APPDATA"), "VRLinks")
+            folder = os.path.join(os.environ.get("APPDATA"), "VRCInteractiveSoundboard")
             os.makedirs(folder, exist_ok=True)
             subprocess.Popen(f'explorer "{folder}"')
 
