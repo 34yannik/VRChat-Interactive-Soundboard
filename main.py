@@ -6,11 +6,6 @@ from PySide6.QtWidgets import QApplication
 from PySide6.QtGui import QIcon
 from ui.main_window import MainWindow
 
-# ---------------- META ----------------
-
-__version__ = "0.4.0"
-__author__ = "Yannik / M o o n y ~"
-
 # ---------------- LOCK ----------------
 
 LOCK_FILE = os.path.join(
