@@ -226,6 +226,12 @@ class SidebarWidget(QWidget):
 
 class SoundSettingsPanel(QWidget):
 
+    """
+        TODO:
+            When avatar parameter have been added a 'show parameter' button
+            to easily look at the parameters. Editing only on edit sound button.
+    """
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setStyleSheet("background: transparent;")

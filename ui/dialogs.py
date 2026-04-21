@@ -8,6 +8,7 @@ import fancify_text
 from core.data_manager import get_data_manager
 from core.audio_player import get_audio_outputs
 from meta import __version__, __author__
+from updater import Updater
 
 DIALOG_STYLE = """
     QDialog {
@@ -136,6 +137,15 @@ def _make_volume_row(initial_value=100):
 
 class AddSoundDialog(QDialog):
 
+    """
+        TODO: Add a button to add avatar parameter:
+            Top: Textboxes etc. + a button to add a parameter
+            Bottom: A list with all the added parameter
+            - Some way to easily remove a parameter
+            - Some way to easily edit a parameter
+            - Some way to clear all parameter
+    """
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Add Sound")
@@ -240,6 +250,15 @@ class AddSoundDialog(QDialog):
 
 
 class EditSoundDialog(QDialog):
+
+    """
+        TODO: Add a button to add avatar parameter:
+            Top: Textboxes etc. + a button to add a parameter
+            Bottom: A list with all the added parameter
+            - Some way to easily remove a parameter
+            - Some way to easily edit a parameter
+            - Some way to clear all parameter
+    """
 
     def __init__(self, sound_data, parent=None):
         super().__init__(parent)
@@ -673,7 +692,14 @@ class SettingsDialog(QDialog):
     def __init__(self, current_settings, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Settings")
-        self.setFixedSize(400, 560)
+
+        self.updater = Updater.get_updater()
+
+        if self.updater.is_update_available():
+            self.setFixedSize(400, 600)
+        else:
+            self.setFixedSize(400, 560)
+
         self.current_settings = current_settings
         self._setup_ui()
         self.setStyleSheet(DIALOG_STYLE)

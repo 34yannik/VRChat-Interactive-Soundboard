@@ -4,3 +4,5 @@ python-osc>=1.8.0
 uwuify>=1.2.0
 fancify-text>=0.1.0
 keyboard>=0.13.5
+requests>=2.31.0
+packaging>=23.0

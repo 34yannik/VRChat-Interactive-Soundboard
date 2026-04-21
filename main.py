@@ -2,9 +2,15 @@ import sys
 import os
 import tempfile
 import subprocess
+import threading
+
 from PySide6.QtWidgets import QApplication
 from PySide6.QtGui import QIcon
+
 from ui.main_window import MainWindow
+from updater import Updater
+from meta import __version__
+
 
 # ---------------- LOCK ----------------
 
@@ -12,6 +18,7 @@ LOCK_FILE = os.path.join(
     tempfile.gettempdir(),
     "vrc_soundboard.lock"
 )
+
 
 # ---------------- FUNCTIONS ----------------
 
@@ -21,7 +28,6 @@ def resource_path(relative_path):
 
 
 def is_process_running(pid: int) -> bool:
-    """Windows-only check if PID exists"""
     try:
         output = subprocess.check_output(
             ["tasklist", "/FI", f"PID eq {pid}"],
@@ -47,7 +53,6 @@ def already_running():
     except:
         pass
 
-    # stale lock entfernen
     try:
         os.remove(LOCK_FILE)
     except:
@@ -69,6 +74,19 @@ def remove_lock():
         pass
 
 
+# ---------------- UPDATE CHECK ----------------
+
+def check_for_updates():
+    try:
+        updater = Updater(__version__, True)
+
+        if updater.is_update_available():
+            print(f"[Updater] Update verfügbar: {updater.latest_release['version']}")
+
+    except Exception as e:
+        print("[Updater] Fehler:", e)
+
+
 # ---------------- MAIN ----------------
 
 if __name__ == "__main__":
@@ -88,6 +106,9 @@ if __name__ == "__main__":
     window = MainWindow()
     window.setWindowIcon(icon)
     window.show()
+
+    # ---------------- THREADING UPDATE CHECK ----------------
+    threading.Thread(target=check_for_updates, daemon=True).start()
 
     try:
         exit_code = app.exec()
