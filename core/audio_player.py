@@ -1,7 +1,7 @@
 import pygame
 from PySide6.QtCore import QUrl
 from PySide6.QtMultimedia import QMediaPlayer, QAudioOutput, QMediaDevices
-from data_manager import get_data_manager
+from core.data_manager import get_data_manager
 
 try:
     if not pygame.mixer.get_init():

@@ -2,7 +2,7 @@ from PySide6.QtWidgets import (QWidget, QScrollArea, QGridLayout, QVBoxLayout,
                                QFrame, QLabel, QMenu)
 from PySide6.QtCore import Qt, Signal
 
-from sound_card import SoundCard
+from ui.widgets.sound_card import SoundCard
 
 BASE_CARD_SIZE = 210
 MIN_CARD_SIZE = 80

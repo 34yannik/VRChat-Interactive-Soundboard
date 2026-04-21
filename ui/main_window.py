@@ -1,9 +1,9 @@
 from PySide6.QtWidgets import QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QLabel, QPushButton, QFrame, QDialog
 from PySide6.QtCore import Qt, Signal, QObject
 
-from data_manager import get_data_manager
-from audio_player import AudioPlayer, get_audio_duration
-from osc_client import OscClient
+from core.data_manager import get_data_manager
+from core.audio_player import AudioPlayer, get_audio_duration
+from core.osc_client import OscClient
 from ui.widgets.sidebar_widget import SidebarWidget
 from ui.widgets.topbar_widget import TopBarWidget
 from ui.widgets.pages_tabbar import PagesTabBar

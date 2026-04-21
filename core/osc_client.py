@@ -1,7 +1,7 @@
 # OSC = Open Sound Control, damit kommunizieren wir mit VRChat
 import fancify_text
 import uwuify
-from data_manager import DataManager
+from core.data_manager import DataManager
 
 try:
     from pythonosc import udp_client
