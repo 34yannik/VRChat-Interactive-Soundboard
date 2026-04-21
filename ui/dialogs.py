@@ -7,6 +7,7 @@ from PySide6.QtCore import Qt, QKeyCombination
 import fancify_text
 from core.data_manager import get_data_manager
 from core.audio_player import get_audio_outputs
+from meta import __version__, __author__
 
 DIALOG_STYLE = """
     QDialog {
@@ -672,7 +673,7 @@ class SettingsDialog(QDialog):
     def __init__(self, current_settings, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Settings")
-        self.setFixedSize(400, 420)
+        self.setFixedSize(400, 560)
         self.current_settings = current_settings
         self._setup_ui()
         self.setStyleSheet(DIALOG_STYLE)
@@ -686,16 +687,20 @@ class SettingsDialog(QDialog):
         title_label.setStyleSheet("color: white; font-size: 16px; font-weight: bold;")
         layout.addWidget(title_label)
 
+        info = QLabel(f"Version {__version__} by {__author__}")
+        info.setStyleSheet("background: transparent; font-size: 12px; line-height: 1.6;")
+        layout.addWidget(info)
+
         osc_label = QLabel("VRChat OSC Connection")
         osc_label.setStyleSheet("color: #777799; font-size: 11px; font-weight: bold; letter-spacing: 1px;")
         layout.addWidget(osc_label)
 
-        form = QFormLayout()
-        form.setSpacing(10)
+        osc_form = QFormLayout()
+        osc_form.setSpacing(10)
 
         self.osc_host_input = QLineEdit()
         self.osc_host_input.setText(self.current_settings.get("osc_host", "127.0.0.1"))
-        form.addRow("OSC Host (IP):", self.osc_host_input)
+        osc_form.addRow("OSC Host (IP):", self.osc_host_input)
 
         self.osc_port_input = QSpinBox()
         self.osc_port_input.setRange(1024, 65535)
@@ -704,13 +709,20 @@ class SettingsDialog(QDialog):
             "background-color: #16162a; color: #ddddee; border: 1px solid #2a2a45; "
             "border-radius: 6px; padding: 4px 8px;"
         )
-        form.addRow("OSC Port:", self.osc_port_input)
+        osc_form.addRow("OSC Port:", self.osc_port_input)
 
-        layout.addLayout(form)
+        layout.addLayout(osc_form)
 
-        font_label = QLabel("Chatbox Font")
-        font_label.setStyleSheet("color: #777799; font-size: 11px; font-weight: bold; letter-spacing: 1px;")
-        layout.addWidget(font_label)
+        chatbox_label = QLabel("Chatbox")
+        chatbox_label.setStyleSheet("color: #777799; font-size: 11px; font-weight: bold; letter-spacing: 1px;")
+        layout.addWidget(chatbox_label)
+
+        chatbox_form = QFormLayout()
+        chatbox_form.setSpacing(10)
+
+        self.enable_chatbox = QCheckBox("Enable OSC Chatbox")
+        self.enable_chatbox.setChecked(self.current_settings.get("enable_chatbox", True))
+        chatbox_form.addRow(self.enable_chatbox)
 
         self.font_dropdown = QComboBox()
         self.font_dropdown.addItems(self.get_all_fonts())
@@ -721,14 +733,16 @@ class SettingsDialog(QDialog):
             "background-color: #16162a; color: #ddddee; border: 1px solid #2a2a45; "
             "border-radius: 6px; padding: 6px;"
         )
-        layout.addWidget(self.font_dropdown)
+        chatbox_form.addRow("Chatbox Font:", self.font_dropdown)
+
+        layout.addLayout(chatbox_form)
 
         sound_label = QLabel("Sound Settings")
         sound_label.setStyleSheet("color: #777799; font-size: 11px; font-weight: bold; letter-spacing: 1px;")
         layout.addWidget(sound_label)
 
         self.enable_output = QCheckBox("Enable Output Device")
-        self.enable_output.setChecked(self.current_settings.get("enable_output", False))
+        self.enable_output.setChecked(self.current_settings.get("enable_output", True))
         layout.addWidget(self.enable_output)
 
         self.output_device = QComboBox()
@@ -746,6 +760,32 @@ class SettingsDialog(QDialog):
         layout.addWidget(self.output_device)
 
         self.enable_output.toggled.connect(self.output_device.setEnabled)
+
+        storage_container = QHBoxLayout()
+
+        storage_lbl = QLabel(f"%APPDATA%/VRCInteractiveSoundboard")
+        storage_lbl.setStyleSheet(
+            "color: #777799; background: transparent; font-size: 11px; font-family: monospace;")
+
+        open_folder_btn = QPushButton("Open Folder")
+        open_folder_btn.setFixedHeight(32)
+        open_folder_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+
+        import os
+        import subprocess
+
+        def open_folder():
+            folder = os.path.join(os.environ.get("APPDATA"), "VRLinks")
+            os.makedirs(folder, exist_ok=True)
+            subprocess.Popen(f'explorer "{folder}"')
+
+        open_folder_btn.clicked.connect(open_folder)
+
+        storage_container.addWidget(storage_lbl)
+        storage_container.addStretch()
+        storage_container.addWidget(open_folder_btn)
+
+        layout.addLayout(storage_container)
 
         button_row = QHBoxLayout()
         button_row.addStretch()
@@ -777,6 +817,7 @@ class SettingsDialog(QDialog):
             "font": self.font_dropdown.currentText(),
             "enable_output": self.enable_output.isChecked(),
             "output_device": self.output_device.currentText(),
+            "enable_chatbox": self.enable_chatbox.isChecked(),
         }
 
     def save_and_close(self):
@@ -786,6 +827,7 @@ class SettingsDialog(QDialog):
             "font": self.font_dropdown.currentText(),
             "enable_output": self.enable_output.isChecked(),
             "output_device": self.output_device.currentText(),
+            "enable_chatbox": self.enable_chatbox.isChecked(),
         }
         dm = get_data_manager()
         dm.update_settings_bulk(settings)

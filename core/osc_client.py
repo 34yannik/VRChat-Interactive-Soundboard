@@ -1,7 +1,7 @@
 # OSC = Open Sound Control, damit kommunizieren wir mit VRChat
 import fancify_text
 import uwuify
-from core.data_manager import DataManager
+from core.data_manager import get_data_manager
 
 try:
     from pythonosc import udp_client
@@ -42,8 +42,12 @@ class OscClient:
 
         try:
 
-            data_manager = DataManager()
+            data_manager = get_data_manager()
             settings = data_manager.get_settings()
+
+            if not settings.get("enable_chatbox"):
+                return
+
             font = settings.get("font")
 
             if font == "UwU":

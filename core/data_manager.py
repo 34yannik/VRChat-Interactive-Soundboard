@@ -31,6 +31,7 @@ DEFAULT_DATA = {
         "volume": 75,
         "columns": 4,
         "rows": 3,
+        "enable_chatbox"
         "osc_host": "127.0.0.1",
         "osc_port": 9000,
         "font": "sansSerif",
@@ -66,6 +67,7 @@ class DataManager:
                 data["settings"].setdefault("volume", 75)
                 data["settings"].setdefault("columns", 4)
                 data["settings"].setdefault("rows", 3)
+                data["settings"].setdefault("enable_chatbox", True)
                 data["settings"].setdefault("osc_host", "127.0.0.1")
                 data["settings"].setdefault("osc_port", 9000)
                 data["settings"].setdefault("font", "sansSerif")
