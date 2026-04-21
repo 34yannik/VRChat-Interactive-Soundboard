@@ -3,6 +3,7 @@ import os
 import copy
 import fancify_text
 from PySide6.QtMultimedia import QMediaDevices
+from meta import __version__
 
 APPDATA_DIR = os.path.join(
     os.getenv("APPDATA"),
@@ -31,7 +32,7 @@ DEFAULT_DATA = {
         "volume": 75,
         "columns": 4,
         "rows": 3,
-        "enable_chatbox"
+        "enable_chatbox": True,
         "osc_host": "127.0.0.1",
         "osc_port": 9000,
         "font": "sansSerif",
