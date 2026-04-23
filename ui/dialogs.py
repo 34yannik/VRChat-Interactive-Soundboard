@@ -589,11 +589,11 @@ class AddSoundPoolDialog(QDialog):
         layout.addWidget(chatbox_lbl)
 
         mode_row = QHBoxLayout()
-        mode_row.setSpacing(16)
+        mode_row.setSpacing(5)
 
         self._mode_group = QButtonGroup(self)
-        self.shared_radio = QRadioButton("Shared  –  one text for all sounds")
-        self.individual_radio = QRadioButton("Individual  –  each sound has its own text")
+        self.shared_radio = QRadioButton("Shared: one text for all sounds")
+        self.individual_radio = QRadioButton("Individual: each sound has its own text")
         self.shared_radio.setChecked(True)
         self.shared_radio.setStyleSheet(RADIO_STYLE)
         self.individual_radio.setStyleSheet(RADIO_STYLE)
@@ -817,7 +817,7 @@ class EditSoundPoolDialog(QDialog):
         layout.addWidget(chatbox_lbl)
 
         mode_row = QHBoxLayout()
-        mode_row.setSpacing(16)
+        mode_row.setSpacing(5)
 
         self._mode_group = QButtonGroup(self)
         self.shared_radio = QRadioButton("Shared  –  one text for all sounds")
