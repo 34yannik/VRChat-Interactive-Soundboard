@@ -1,16 +1,16 @@
 # VRC Interact Soundboard
-A specialized soundboard for VRChat — control sound, chatbox messages, and avatar parameters through a single, unified interface.
+A specialized soundboard for VRChat — control sound, chatbox messages, and soon avatar parameters through a single, unified interface.
 
 ![App Icon](resources/icon.png)
 
 ## Features
-* **Collections**: Organize sounds into logical groups (e.g., Gaming Memes, Roleplay FX, etc.).
+* **Collections**: Organize sounds into logical groups (Memes, Roleplay, etc.).
 * **Pages**: Support for multiple pages per collection for maximum organization.
 * **Audio Playback**: Support for MP3, WAV, OGG, and FLAC via click or customizable hotkeys.
 * **OSC Chatbox**: Automatically send custom messages to the VRChat chatbox whenever a sound is played.
 * **VRChat Status**: Real-time indicator showing if the VRChat OSC connection is active.
 * **Search**: Quickly find specific sounds by name.
-* **Settings**: Fully configurable OSC Host/Port and Chatbox Font settings.
+* **Settings**: Fully configurable OSC Host/Port, Chatbox Font and more.
 
 ---
 
@@ -65,5 +65,5 @@ To allow the soundboard to communicate with VRChat, follow these steps:
 
 ## Data & Configuration
 All your settings, collections, and sound mappings are stored locally in:
-`vrc-interactive-soundboard-cfg.json` 
+`%APPDATA%/VRCInteractiveSoundboard/soundboard-config.json` 
 inside the program folder. Back up this file to save your configurations or share it with others!
