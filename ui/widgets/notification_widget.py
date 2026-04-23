@@ -140,9 +140,6 @@ class NotificationCard(QWidget):
 
 class NotificationManager:
     """
-    plain python class — no widget.
-    cards are children of main_window and positioned with move().
-
     usage:
         nm = NotificationManager(main_window)
         nm.show_notification("Title", "Body text", TYPE_UPDATE)
@@ -157,7 +154,7 @@ class NotificationManager:
         card = NotificationCard(
             title, message, notif_type,
             action_label, action_callback,
-            parent=self._win   # child of main window — always visible inside it
+            parent=self._win
         )
         card._on_removed = self._on_card_removed
         self._cards.append(card)

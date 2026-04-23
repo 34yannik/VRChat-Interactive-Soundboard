@@ -308,7 +308,32 @@ class SoundSettingsPanel(QWidget):
             self.file_value.setText("—")
             return
 
-        self.sound_name_label.setText(self._format_text(sound_data.get("name", "Unknown")))
+        if sound_data.get("type") == "pool":
+            self.sound_name_label.setText(sound_data.get("name", "Sound Pool"))
+
+            sounds = sound_data.get("sounds", [])
+            self.duration_label.setText(f"{len(sounds)} sounds")
+
+            hotkey = sound_data.get("hotkey", "")
+            self.hotkey_value.setText(self._format_text(hotkey if hotkey else "—"))
+
+            mode = sound_data.get("chatbox_mode", "individual")
+
+            if mode == "shared":
+                osc = sound_data.get("osc_message", "")
+                text = osc if osc else "—"
+            else:
+                text = "per sound"
+
+            self.osc_value.setText(self._format_text(text))
+
+            self.volume_value.setText("—")
+            self.file_value.setText("Multiple")
+
+            return
+
+        self.sound_name_label.setText(sound_data.get("name", "Unknown")
+        )
 
         duration = sound_data.get("duration", "")
         self.duration_label.setText(duration if duration and duration != "0:00" else "")
@@ -319,15 +344,16 @@ class SoundSettingsPanel(QWidget):
         osc = sound_data.get("osc_message", "")
         self.osc_value.setText(self._format_text(osc if osc else "—"))
 
-        # show per-sound volume as percentage
         vol = sound_data.get("volume", 100)
         self.volume_value.setText(f"{vol}%")
 
         file_path = sound_data.get("file_path", "")
         file_name = os.path.basename(file_path) if file_path else "—"
+
         if len(file_name) > 22:
             name, ext = os.path.splitext(file_name)
             file_name = name[:18] + "…" + ext
+
         self.file_value.setText(file_name)
 
     def _format_text(self, text: str) -> str:

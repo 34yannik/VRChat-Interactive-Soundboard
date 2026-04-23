@@ -3,13 +3,13 @@ from PySide6.QtWidgets import (QWidget, QScrollArea, QGridLayout, QVBoxLayout,
 from PySide6.QtCore import Qt, Signal
 
 from ui.widgets.sound_card import SoundCard
+from ui.widgets.sound_pool_card import SoundPoolCard
 
 BASE_CARD_SIZE = 210
 MIN_CARD_SIZE = 80
 
 
 def card_size_for_columns(columns):
-    """Berechnet die Kartengröße anhand der Spaltenanzahl"""
     size = int(BASE_CARD_SIZE * (4 / columns))
     return max(size, MIN_CARD_SIZE)
 
@@ -33,7 +33,7 @@ class AddSoundCard(QFrame):
         plus_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         plus_label.setStyleSheet(f"color: #555577; font-size: {font_size}px; background: transparent;")
 
-        text_label = QLabel("Add Sound")
+        text_label = QLabel("Add")
         text_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         text_label.setStyleSheet(f"color: #555577; font-size: {text_size}px; background: transparent;")
 
@@ -64,11 +64,12 @@ class SoundGrid(QWidget):
     sound_edit_requested = Signal(dict)
     sound_delete_requested = Signal(dict)
     add_sound_clicked = Signal()
+    add_pool_clicked = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self.number_of_columns = 4
-        self.number_of_rows = 4  # Beibehalten für spätere Nutzung
+        self.number_of_rows = 4
         self.sound_cards = []
         self._setup_ui()
 
@@ -108,42 +109,60 @@ class SoundGrid(QWidget):
         current_column = 0
 
         for sound_data in sounds_list:
-            card = SoundCard(sound_data, size=card_size)
+            if sound_data.get("type") == "pool":
+                card = SoundPoolCard(sound_data, size=card_size)
+            else:
+                card = SoundCard(sound_data, size=card_size)
+
             card.clicked.connect(self.sound_clicked.emit)
             card.right_clicked.connect(self.sound_right_clicked_action)
-
-            # FIX: Nur ein einziges Mal zur Liste hinzufügen!
             self.sound_cards.append(card)
 
             self.grid_layout.addWidget(card, current_row, current_column)
-
             current_column += 1
             if current_column >= self.number_of_columns:
                 current_column = 0
                 current_row += 1
 
         add_card = AddSoundCard(size=card_size)
-        add_card.clicked.connect(self.add_sound_clicked.emit)
+        add_card.clicked.connect(self._on_add_clicked)
         self.grid_layout.addWidget(add_card, current_row, current_column)
+
+    def _on_add_clicked(self):
+        menu = QMenu(self)
+        menu.setStyleSheet("""
+            QMenu {
+                background-color: #16162a;
+                color: #ccccdd;
+                border: 1px solid #2a2a45;
+                border-radius: 6px;
+                padding: 4px;
+            }
+            QMenu::item { padding: 7px 16px; border-radius: 4px; }
+            QMenu::item:selected { background-color: #2a2a45; }
+        """)
+
+        sound_action = menu.addAction("Add Sound")
+        pool_action = menu.addAction("Add Sound Pool")
+
+        action = menu.exec(self.cursor().pos())
+
+        if action == sound_action:
+            self.add_sound_clicked.emit()
+        elif action == pool_action:
+            self.add_pool_clicked.emit()
 
     def set_columns(self, columns):
         self.number_of_columns = columns
-        # Daten sichern, bevor die Widgets gelöscht werden
         sound_data_list = [card.sound_data for card in self.sound_cards]
         self.load_sounds(sound_data_list)
 
-    # --- WIEDER EINGEFÜGTE METHODEN ---
-
     def set_rows(self, rows):
-        """Setzt die Anzahl der Reihen"""
         self.number_of_rows = rows
 
     def stop_all_animations(self):
-        """Stoppt die Wellenform-Animation auf allen Karten"""
         for card in self.sound_cards:
             card.set_playing(False)
-
-    # ----------------------------------
 
     def sound_right_clicked_action(self, sound_data):
         menu = QMenu(self)
@@ -152,8 +171,11 @@ class SoundGrid(QWidget):
             QMenu::item:selected { background-color: #4a6cf7; }
         """)
 
-        edit_action = menu.addAction("Edit Sound")
-        delete_action = menu.addAction("Delete Sound")
+        is_pool = sound_data.get("type") == "pool"
+        label = "Pool" if is_pool else "Sound"
+
+        edit_action = menu.addAction(f"Edit {label}")
+        delete_action = menu.addAction(f"Delete {label}")
 
         action = menu.exec(self.cursor().pos())
 

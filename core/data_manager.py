@@ -74,11 +74,19 @@ class DataManager:
                 data["settings"].setdefault("enable_output", False)
                 data["settings"].setdefault("output_device", "")
 
-                # migrate existing sounds that have no per-sound volume yet
                 for col in data.get("collections", []):
                     for page in col.get("pages", []):
                         for sound in page.get("sounds", []):
                             sound.setdefault("volume", 100)
+                            sound.setdefault("type", "sound")
+                            if sound.get("type") == "pool":
+                                sound.setdefault("chatbox_mode", "shared")
+                                sound.setdefault("osc_message", "")
+                                sound.setdefault("sounds", [])
+                                for sub in sound.get("sounds", []):
+                                    sub.setdefault("volume", 100)
+                                    sub.setdefault("osc_message", "")
+                                    sub.setdefault("duration", "0:00")
 
                 print("[LOAD SETTINGS]", data.get("settings"))
                 return data
@@ -219,7 +227,8 @@ class DataManager:
                 existing_ids = [s["id"] for s in page["sounds"]]
                 new_id = max(existing_ids) + 1 if existing_ids else 1
                 sound_data["id"] = new_id
-                sound_data.setdefault("volume", 100)
+                if sound_data.get("type", "sound") == "sound":
+                    sound_data.setdefault("volume", 100)
                 page["sounds"].append(sound_data)
                 self.save_data()
                 return sound_data
@@ -236,7 +245,8 @@ class DataManager:
                 for i, sound in enumerate(page.get("sounds", [])):
                     if sound.get("id") == sound_id:
                         new_data["id"] = sound_id
-                        new_data.setdefault("volume", 100)
+                        if new_data.get("type", "sound") == "sound":
+                            new_data.setdefault("volume", 100)
                         page["sounds"][i] = new_data
                         self.save_data()
                         return True

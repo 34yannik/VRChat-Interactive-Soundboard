@@ -1,3 +1,5 @@
+import random
+
 from PySide6.QtWidgets import QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QLabel, QPushButton, QFrame, QDialog
 from PySide6.QtCore import Qt, Signal, QObject
 
@@ -10,7 +12,7 @@ from ui.widgets.pages_tabbar import PagesTabBar
 from ui.widgets.sound_grid import SoundGrid
 from ui.widgets.notification_widget import NotificationManager, TYPE_INFO, TYPE_SUCCESS, TYPE_WARNING, TYPE_UPDATE  # noqa
 from ui.dialogs import AddSoundDialog, AddCollectionDialog, SettingsDialog, EditCollectionDialog, EditPageDialog, \
-    DeletePageDialog, DeleteCollectionDialog, EditSoundDialog, DeleteSoundDialog
+    DeletePageDialog, DeleteCollectionDialog, EditSoundDialog, DeleteSoundDialog, AddSoundPoolDialog, EditSoundPoolDialog
 import keyboard
 
 
@@ -108,6 +110,7 @@ class MainWindow(QMainWindow):
         self.sound_grid = SoundGrid()
         self.sound_grid.sound_clicked.connect(self._on_sound_card_clicked)
         self.sound_grid.add_sound_clicked.connect(self._open_add_sound_dialog)
+        self.sound_grid.add_pool_clicked.connect(self._open_add_sound_pool_dialog)
         self.sound_grid.sound_edit_requested.connect(self._on_edit_sound)
         self.sound_grid.sound_delete_requested.connect(self._on_delete_sound)
         right_panel_layout.addWidget(self.sound_grid, stretch=1)
@@ -123,8 +126,6 @@ class MainWindow(QMainWindow):
         if hasattr(self, "notifications"):
             self.notifications.update_geometry()
 
-    # ---- public api ---------------------------------------------------------
-
     def notify(self, title, message="", notif_type=TYPE_INFO,
                 action_label=None, action_callback=None):
         """thread-safe: can be called from any thread"""
@@ -138,8 +139,6 @@ class MainWindow(QMainWindow):
             action_label or None,
             action_callback if callable(action_callback) else None
         )
-
-    # ---- ui -----------------------------------------------------------------
 
     def _create_collection_header(self):
         header = QWidget()
@@ -308,25 +307,47 @@ class MainWindow(QMainWindow):
             self._show_collection(collection)
 
     def _on_edit_sound(self, sound_data):
-        dialog = EditSoundDialog(sound_data, self)
+        if sound_data.get("type") == "pool":
 
-        if dialog.exec() == QDialog.DialogCode.Accepted:
-            new_data = dialog.get_sound_data()
+            dialog = EditSoundPoolDialog(sound_data, self)
 
-            if new_data["file_path"] != sound_data["file_path"]:
-                new_data["duration"] = get_audio_duration(new_data["file_path"])
-            else:
-                new_data["duration"] = sound_data.get("duration", "0:00")
+            if dialog.exec() == QDialog.DialogCode.Accepted:
+                new_data = dialog.get_pool_data()
 
-            self.data_manager.update_sound(
-                self.active_collection_id,
-                self.active_page_id,
-                sound_data["id"],
-                new_data
-            )
+                for sound in new_data.get("sounds", []):
+                    if sound.get("file_path"):
+                        sound["duration"] = get_audio_duration(sound["file_path"])
+                    else:
+                        sound["duration"] = "0:00"
 
-            self._on_page_selected(self.active_page_id)
-            self._setup_keyboard_shortcuts()
+                self.data_manager.update_sound(
+                    self.active_collection_id,
+                    self.active_page_id,
+                    sound_data["id"],
+                    new_data
+                )
+
+        else:
+
+            dialog = EditSoundDialog(sound_data, self)
+
+            if dialog.exec() == QDialog.DialogCode.Accepted:
+                new_data = dialog.get_sound_data()
+
+                if new_data["file_path"] != sound_data["file_path"]:
+                    new_data["duration"] = get_audio_duration(new_data["file_path"])
+                else:
+                    new_data["duration"] = sound_data.get("duration", "0:00")
+
+                self.data_manager.update_sound(
+                    self.active_collection_id,
+                    self.active_page_id,
+                    sound_data["id"],
+                    new_data
+                )
+
+        self._on_page_selected(self.active_page_id)
+        self._setup_keyboard_shortcuts()
 
     def _on_delete_sound(self, sound_data):
         dialog = DeleteSoundDialog(sound_data.get("name", "Unknown Sound"), self)
@@ -349,16 +370,39 @@ class MainWindow(QMainWindow):
                     break
 
     def _on_sound_card_clicked(self, sound_data):
-        file_path = sound_data.get("file_path", "")
-        if file_path:
-            sound_volume = sound_data.get("volume", 100)
-            self.audio_player.play_sound(file_path, sound_volume)
+        if sound_data.get("type") == "pool":
+            sounds = sound_data.get("sounds", [])
 
-        osc_message = sound_data.get("osc_message", "")
-        if osc_message:
-            self.osc_client.send_chatbox_message(osc_message)
+            if sounds:
+                sound = random.choice(sounds)
 
-        self.sidebar.sound_settings.load_sound(sound_data)
+                file_path = sound.get("file_path", "")
+                if file_path:
+                    sound_volume = sound.get("volume", 100)
+                    self.audio_player.play_sound(file_path, sound_volume)
+
+                if sound_data.get("chatbox_mode") == "individual":
+                    osc_message = sound.get("osc_message", "")
+                else:
+                    osc_message = sound_data.get("osc_message", "")
+
+                if osc_message:
+                    self.osc_client.send_chatbox_message(osc_message)
+
+            self.sidebar.sound_settings.load_sound(sound_data)
+
+        else:
+
+            file_path = sound_data.get("file_path", "")
+            if file_path:
+                sound_volume = sound_data.get("volume", 100)
+                self.audio_player.play_sound(file_path, sound_volume)
+
+            osc_message = sound_data.get("osc_message", "")
+            if osc_message:
+                self.osc_client.send_chatbox_message(osc_message)
+
+            self.sidebar.sound_settings.load_sound(sound_data)
 
     def _stop_all_sounds(self):
         self.audio_player.stop_all()
@@ -440,6 +484,26 @@ class MainWindow(QMainWindow):
 
             if sound_data["file_path"]:
                 sound_data["duration"] = get_audio_duration(sound_data["file_path"])
+
+            if self.active_collection_id and self.active_page_id:
+                self.data_manager.add_sound_to_page(
+                    self.active_collection_id,
+                    self.active_page_id,
+                    sound_data
+                )
+                self._on_page_selected(self.active_page_id)
+
+        self._setup_keyboard_shortcuts()
+
+    def _open_add_sound_pool_dialog(self):
+        dialog = AddSoundPoolDialog(self)
+        if dialog.exec() == AddSoundPoolDialog.DialogCode.Accepted:
+
+            sound_data = dialog.get_pool_data()
+
+            for sound in sound_data["sounds"]:
+                if sound.get("file_path"):
+                    sound["duration"] = get_audio_duration(sound["file_path"])
 
             if self.active_collection_id and self.active_page_id:
                 self.data_manager.add_sound_to_page(
