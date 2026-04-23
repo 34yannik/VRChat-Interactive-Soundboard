@@ -1,7 +1,8 @@
 import random
+import functools
 
 from PySide6.QtWidgets import QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QLabel, QPushButton, QFrame, QDialog
-from PySide6.QtCore import Qt, Signal, QObject
+from PySide6.QtCore import Qt, Signal, QObject, QMetaObject, Qt as QtCore
 
 from core.data_manager import get_data_manager
 from core.audio_player import AudioPlayer, get_audio_duration
@@ -21,12 +22,13 @@ class HotkeyEmitter(QObject):
 
 
 class MainWindow(QMainWindow):
-    # signal so background threads can safely trigger a notification
     _notify_signal = Signal(str, str, str, str, object, object)
+    _hotkey_sound_signal = Signal(dict)
 
     def __init__(self):
         super().__init__()
         self._notify_signal.connect(self._on_notify_signal)
+        self._hotkey_sound_signal.connect(self._on_sound_card_clicked)
         self.setWindowTitle("VRC Interactive Soundboard")
         self.resize(1300, 820)
         self.setMinimumSize(900, 600)
@@ -40,10 +42,8 @@ class MainWindow(QMainWindow):
         self.active_collection_id = None
         self.active_page_id = None
 
-        self.hotkey_emitter = HotkeyEmitter()
-        self.hotkey_emitter.pressed.connect(self._on_hotkey_triggered)
+        self.hotkey_map = {}
 
-        self._setup_keyboard_shortcuts()
         self._setup_ui()
         self._load_initial_data()
 
@@ -118,7 +118,6 @@ class MainWindow(QMainWindow):
         main_area_layout.addWidget(right_panel, stretch=1)
         root_layout.addWidget(main_area_widget, stretch=1)
 
-        # notification overlay sits above all other widgets
         self.notifications = NotificationManager(self)
 
     def resizeEvent(self, event):
@@ -128,12 +127,10 @@ class MainWindow(QMainWindow):
 
     def notify(self, title, message="", notif_type=TYPE_INFO,
                 action_label=None, action_callback=None):
-        """thread-safe: can be called from any thread"""
         self._notify_signal.emit(title, message, notif_type,
                                  action_label or "", action_callback, None)
 
     def _on_notify_signal(self, title, message, notif_type, action_label, action_callback, _):
-        """always runs on main thread via signal/slot"""
         self.notifications.show_notification(
             title, message, notif_type,
             action_label or None,
@@ -188,36 +185,47 @@ class MainWindow(QMainWindow):
 
         return header
 
-    def _on_hotkey_triggered(self, data):
-        if data.get("action") == "stop_all":
+    def _setup_keyboard_shortcuts(self):
+        keyboard.unhook_all()
+        self.hotkey_map.clear()
+        keyboard.hook(self._on_key_event)
+
+        self.hotkey_map['esc'] = {'action': 'stop_all'}
+
+        collections = self.data_manager.get_collections()
+        for col in collections:
+            for page in col.get("pages", []):
+                for sound in page.get("sounds", []):
+                    hotkey = sound.get("hotkey", "").strip().lower()
+                    if hotkey:
+                        self.hotkey_map[hotkey] = sound
+
+    def _on_key_event(self, event):
+        if event.event_type != keyboard.KEY_DOWN:
+            return
+
+        key_name = event.name.lower()
+
+        modifiers = []
+        if keyboard.is_pressed('shift'):
+            modifiers.append('shift')
+        if keyboard.is_pressed('ctrl'):
+            modifiers.append('ctrl')
+        if keyboard.is_pressed('alt'):
+            modifiers.append('alt')
+
+        if modifiers:
+            hotkey_candidate = '+'.join(modifiers + [key_name])
+        else:
+            hotkey_candidate = key_name
+
+        if hotkey_candidate == 'esc':
             self._stop_all_sounds()
             return
-        self._on_sound_card_clicked(data)
 
-    def _setup_keyboard_shortcuts(self):
-        try:
-            keyboard.unhook_all()
-        except Exception:
-            pass
-
-        def on_key_event(event):
-            if event.event_type == keyboard.KEY_DOWN:
-                key_name = event.name.lower()
-
-                if key_name == 'esc':
-                    self.hotkey_emitter.pressed.emit({"action": "stop_all"})
-                    return
-
-                collections = self.data_manager.get_collections()
-                for col in collections:
-                    for page in col.get("pages", []):
-                        for sound in page.get("sounds", []):
-                            hotkey = sound.get("hotkey", "").lower().replace(" ", "")
-                            if key_name == hotkey:
-                                self.hotkey_emitter.pressed.emit(sound)
-                                return
-
-        keyboard.hook(on_key_event)
+        sound_data = self.hotkey_map.get(hotkey_candidate)
+        if sound_data:
+            self._hotkey_sound_signal.emit(sound_data)
 
     def _load_initial_data(self):
         collections = self.data_manager.get_collections()
