@@ -11,6 +11,7 @@ except Exception as e:
     print(f"pygame init failed: {e}")
     PYGAME_AVAILABLE = False
 
+
 def get_audio_duration(file_path):
     try:
         if not PYGAME_AVAILABLE:
@@ -18,12 +19,14 @@ def get_audio_duration(file_path):
         sound = pygame.mixer.Sound(file_path)
         total_seconds = int(sound.get_length())
         return f"{total_seconds // 60}:{total_seconds % 60:02d}"
-    except Exception:
+    except (pygame.error, FileNotFoundError, OSError):
         return "0:00"
+
 
 def get_audio_outputs():
     devices = QMediaDevices.audioOutputs()
     return [d.description() for d in devices] or ["Default Output"]
+
 
 class AudioPlayer:
     def __init__(self):
@@ -45,6 +48,9 @@ class AudioPlayer:
 
         self.player.durationChanged.connect(self._on_duration_changed)
         self._current_duration = 0
+
+        # Store timer references to prevent garbage collection
+        self._pending_timers = []
 
     def _apply_output_device(self):
         settings = self.data_manager.get_settings()
@@ -95,7 +101,7 @@ class AudioPlayer:
             if PYGAME_AVAILABLE:
                 sound = pygame.mixer.Sound(file_path)
                 return int(sound.get_length() * 1000)
-        except:
+        except (pygame.error, FileNotFoundError, OSError):
             pass
         return 0
 
@@ -115,29 +121,54 @@ class AudioPlayer:
         try:
             volume_factor = self._combined_volume(sound_volume)
             sound = pygame.mixer.Sound(file_path)
-            sound.set_volume(volume_factor)
+            sound.set_volume(min(1.0, volume_factor))
             sound.play()
-        except Exception as e:
+        except (pygame.error, FileNotFoundError, OSError) as e:
             print(f"pygame playback failed: {e}")
             self._play_long_qt(file_path, sound_volume)
 
     def _play_long_qt(self, file_path, sound_volume):
         if self.player.playbackState() != QMediaPlayer.PlaybackState.StoppedState:
             self._fade_out(duration_ms=30, then_stop=True)
-            QTimer.singleShot(40, lambda: self._start_qt_sound(file_path, sound_volume))
+
+            # Create and store timer reference
+            timer = QTimer()
+            timer.setSingleShot(True)
+            timer.timeout.connect(
+                lambda fp=file_path, sv=sound_volume: self._start_qt_sound(fp, sv)
+            )
+            self._pending_timers.append(timer)
+            timer.start(40)
         else:
             self._start_qt_sound(file_path, sound_volume)
 
     def _start_qt_sound(self, file_path, sound_volume):
-        self.player.stop()
-        self.audio_output.setVolume(0.0)
-        self.player.setSource(QUrl.fromLocalFile(file_path))
-        self.player.play()
-        target_vol = self._combined_volume(sound_volume)
-        self._current_sound_volume = sound_volume
-        QTimer.singleShot(10, lambda: self._fade_in(target_vol, duration_ms=30))
+        try:
+            self.player.stop()
+            self.audio_output.setVolume(0.0)
+            self.player.setSource(QUrl.fromLocalFile(file_path))
+            self.player.play()
+            target_vol = self._combined_volume(sound_volume)
+            self._current_sound_volume = sound_volume
+
+            # Create and store timer reference
+            fade_timer = QTimer()
+            fade_timer.setSingleShot(True)
+            fade_timer.timeout.connect(lambda tv=target_vol: self._fade_in(tv, duration_ms=30))
+            self._pending_timers.append(fade_timer)
+            fade_timer.start(10)
+
+            # Cleanup old timers
+            self._pending_timers = [t for t in self._pending_timers if t.isActive()]
+        except (FileNotFoundError, OSError) as e:
+            print(f"Error starting Qt sound: {e}")
 
     def stop_all(self):
+        # Stop all pending timers
+        for timer in self._pending_timers:
+            timer.stop()
+        self._pending_timers.clear()
+
         if self.player.playbackState() != QMediaPlayer.PlaybackState.StoppedState:
             self._fade_out(duration_ms=30, then_stop=True)
         else:

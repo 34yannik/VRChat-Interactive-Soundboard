@@ -1,8 +1,9 @@
 import random
 import functools
+import threading
 
 from PySide6.QtWidgets import QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QLabel, QPushButton, QFrame, QDialog
-from PySide6.QtCore import Qt, Signal, QObject, QMetaObject, Qt as QtCore
+from PySide6.QtCore import Qt, Signal, QObject, QMetaObject, Qt as QtCore, QTimer
 
 from core.data_manager import get_data_manager
 from core.audio_player import AudioPlayer, get_audio_duration
@@ -11,9 +12,11 @@ from ui.widgets.sidebar_widget import SidebarWidget
 from ui.widgets.topbar_widget import TopBarWidget
 from ui.widgets.pages_tabbar import PagesTabBar
 from ui.widgets.sound_grid import SoundGrid
-from ui.widgets.notification_widget import NotificationManager, TYPE_INFO, TYPE_SUCCESS, TYPE_WARNING, TYPE_UPDATE  # noqa
+from ui.widgets.notification_widget import NotificationManager, TYPE_INFO, TYPE_SUCCESS, TYPE_WARNING, \
+    TYPE_UPDATE  # noqa
 from ui.dialogs import AddSoundDialog, AddCollectionDialog, SettingsDialog, EditCollectionDialog, EditPageDialog, \
-    DeletePageDialog, DeleteCollectionDialog, EditSoundDialog, DeleteSoundDialog, AddSoundPoolDialog, EditSoundPoolDialog
+    DeletePageDialog, DeleteCollectionDialog, EditSoundDialog, DeleteSoundDialog, AddSoundPoolDialog, \
+    EditSoundPoolDialog
 import keyboard
 
 
@@ -43,6 +46,11 @@ class MainWindow(QMainWindow):
         self.active_page_id = None
 
         self.hotkey_map = {}
+
+        # ===== HOTKEY QUEUE FOR THREAD-SAFETY =====
+        self._hotkey_event_queue = []
+        self._hotkey_queue_lock = threading.Lock()
+        self._hotkey_processor_timer = None
 
         self._setup_ui()
         self._load_initial_data()
@@ -126,7 +134,7 @@ class MainWindow(QMainWindow):
             self.notifications.update_geometry()
 
     def notify(self, title, message="", notif_type=TYPE_INFO,
-                action_label=None, action_callback=None):
+               action_label=None, action_callback=None):
         self._notify_signal.emit(title, message, notif_type,
                                  action_label or "", action_callback, None)
 
@@ -186,12 +194,14 @@ class MainWindow(QMainWindow):
         return header
 
     def _setup_keyboard_shortcuts(self):
+        """Setup keyboard listener with thread-safe event processing"""
         keyboard.unhook_all()
         self.hotkey_map.clear()
+
+        # WICHTIG: Der keyboard hook läuft in eigenem Thread!
         keyboard.hook(self._on_key_event)
 
         self.hotkey_map['esc'] = {'action': 'stop_all'}
-
         collections = self.data_manager.get_collections()
         for col in collections:
             for page in col.get("pages", []):
@@ -200,12 +210,20 @@ class MainWindow(QMainWindow):
                     if hotkey:
                         self.hotkey_map[hotkey] = sound
 
+        # Start hotkey event processor timer (runs in main thread)
+        if self._hotkey_processor_timer is None:
+            self._hotkey_processor_timer = QTimer()
+            self._hotkey_processor_timer.timeout.connect(self._process_hotkey_queue)
+        self._hotkey_processor_timer.start(10)  # Check queue every 10ms
+
     def _on_key_event(self, event):
+        """Runs in keyboard library thread - just queue the event!"""
         if event.event_type != keyboard.KEY_DOWN:
             return
 
         key_name = event.name.lower()
 
+        # Build hotkey string
         modifiers = []
         if keyboard.is_pressed('shift'):
             modifiers.append('shift')
@@ -219,13 +237,36 @@ class MainWindow(QMainWindow):
         else:
             hotkey_candidate = key_name
 
+        # ESC check
         if hotkey_candidate == 'esc':
-            self._stop_all_sounds()
+            # Queue stop all event
+            with self._hotkey_queue_lock:
+                self._hotkey_event_queue.append(('stop_all', None))
             return
 
+        # Look up sound
         sound_data = self.hotkey_map.get(hotkey_candidate)
         if sound_data:
-            self._hotkey_sound_signal.emit(sound_data)
+            # Queue the sound event - DON'T emit signal from background thread!
+            with self._hotkey_queue_lock:
+                self._hotkey_event_queue.append(('play_sound', sound_data))
+
+    def _process_hotkey_queue(self):
+        """Process queued hotkey events in main Qt thread"""
+        with self._hotkey_queue_lock:
+            if not self._hotkey_event_queue:
+                return
+
+            # Process only ONE event per timer tick to avoid overload
+            event_type, data = self._hotkey_event_queue.pop(0)
+
+        try:
+            if event_type == 'stop_all':
+                self._stop_all_sounds()
+            elif event_type == 'play_sound':
+                self._hotkey_sound_signal.emit(data)
+        except Exception as e:
+            print(f"Error processing hotkey event: {e}")
 
     def _load_initial_data(self):
         collections = self.data_manager.get_collections()
